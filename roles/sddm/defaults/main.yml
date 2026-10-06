@@ -1,14 +1,6 @@
 ---
-# QML modules the theme imports (svg, virtual keyboard, video backgrounds).
 sddm_packages:
   - sddm
-  - qt6-svg
-  - qt6-virtualkeyboard
-  - qt6-multimedia-ffmpeg
 
-# The greeter handles your password, so the theme is pinned to a reviewed
-# commit instead of tracking master. Review the diff before bumping it.
-sddm_theme_name: sddm-astronaut-theme
-sddm_theme_repo: https://github.com/Keyitdev/sddm-astronaut-theme.git
-sddm_theme_version: abb3163c724935af888ba5ea9ac0c4f22afd8048
-sddm_theme_dir: "/usr/share/sddm/themes/{{ sddm_theme_name }}"
+# Where your own themes live in this repo (one directory per theme).
+sddm_themes_src: "{{ playbook_dir }}/sddm-themes"

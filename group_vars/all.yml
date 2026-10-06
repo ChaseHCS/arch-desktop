@@ -40,12 +40,12 @@ browsers:
   - chromium
 enable_bluetooth: false
 
-# --- Login screen (SDDM + sddm-astronaut-theme) -----------------------------
-# Presets: astronaut, black_hole, cyberpunk, hyprland_kath (animated),
-# jake_the_dog (animated), japanese_aesthetic, pixel_sakura (animated),
-# pixel_sakura_static, post-apocalyptic_hacker, purple_leaves.
-# Previews: https://github.com/Keyitdev/sddm-astronaut-theme
-sddm_theme_preset: hyprland_kath
+# --- Login screen (SDDM) ----------------------------------------------------
+# Name of your theme directory under sddm-themes/ in this repo; it's copied to
+# /usr/share/sddm/themes/<name>. Empty means SDDM's built-in theme.
+# Qt modules your theme imports beyond QtQuick (e.g. qt6-svg,
+# qt6-multimedia-ffmpeg) go in extra_packages.
+sddm_theme: ""
 
 # --- Hyprland ---------------------------------------------------------------
 hypr_terminal: terminator

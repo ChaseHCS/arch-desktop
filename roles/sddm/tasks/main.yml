@@ -1,37 +1,49 @@
 ---
-- name: Install SDDM and the theme's Qt modules
+- name: Install SDDM
   community.general.pacman:
     name: "{{ sddm_packages }}"
     state: present
 
-- name: Install the login screen theme
-  ansible.builtin.git:
-    repo: "{{ sddm_theme_repo }}"
-    dest: "{{ sddm_theme_dir }}"
-    version: "{{ sddm_theme_version }}"
-
-# Themes/astronaut.conf is the theme's ConfigFile; SDDM applies
-# <ConfigFile>.user on top of it, and every preset sets the same keys. This
-# picks a preset without editing the checkout.
-- name: Select the theme preset
-  ansible.builtin.copy:
-    src: "{{ sddm_theme_dir }}/Themes/{{ sddm_theme_preset }}.conf"
-    dest: "{{ sddm_theme_dir }}/Themes/astronaut.conf.user"
-    remote_src: true
-    owner: root
-    group: root
-    mode: "0644"
-
-- name: Install the theme's fonts
-  ansible.builtin.copy:
-    src: "{{ sddm_theme_dir }}/Fonts/"
-    dest: "/usr/share/fonts/{{ sddm_theme_name }}/"
-    remote_src: true
-    owner: root
-    group: root
-    mode: "0644"
-    directory_mode: "0755"
+# Earlier versions of this playbook installed sddm-astronaut-theme.
+- name: Remove sddm-astronaut-theme
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /usr/share/sddm/themes/sddm-astronaut-theme
+    - /usr/share/fonts/sddm-astronaut-theme
   notify: Refresh font cache
+
+- name: Install your login screen theme
+  when: sddm_theme | length > 0
+  block:
+    - name: Check that the theme exists in the repo
+      ansible.builtin.assert:
+        that: (sddm_themes_src ~ '/' ~ sddm_theme ~ '/metadata.desktop') is file
+        fail_msg: >-
+          sddm_theme is "{{ sddm_theme }}" but {{ sddm_themes_src }}/{{ sddm_theme }}/metadata.desktop
+          doesn't exist. See sddm-themes/README.md.
+        quiet: true
+
+    # Without QtVersion=6, SDDM looks for the Qt 5 greeter, which Arch doesn't
+    # ship, and silently falls back to its built-in theme.
+    - name: Check that the theme targets the Qt 6 greeter
+      ansible.builtin.assert:
+        that: >-
+          lookup('ansible.builtin.ini', 'QtVersion', section='SddmGreeterTheme',
+          file=sddm_themes_src ~ '/' ~ sddm_theme ~ '/metadata.desktop', default='5') | string == '6'
+        fail_msg: Add QtVersion=6 to the [SddmGreeterTheme] section of metadata.desktop.
+        quiet: true
+
+    # Copied rather than symlinked: the sddm user can't read your home directory.
+    - name: Copy the theme to /usr/share/sddm/themes
+      ansible.builtin.copy:
+        src: "{{ sddm_themes_src }}/{{ sddm_theme }}/"
+        dest: "/usr/share/sddm/themes/{{ sddm_theme }}/"
+        owner: root
+        group: root
+        mode: "u=rwX,go=rX"
+        directory_mode: "0755"
 
 - name: Ensure the SDDM config directory exists
   ansible.builtin.file:
