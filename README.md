@@ -13,7 +13,8 @@ Ansible playbook that turns a fresh Arch Linux install into a coding desktop:
 - **Toolchains:** Python (uv, pipx), Node.js (system + fnm with the current LTS), Docker (compose, buildx)
 - **GPU:** NVIDIA open kernel modules with early KMS and suspend/resume support (AMD/Intel also supported)
 - **Base:** paru, PipeWire, NetworkManager, microcode, Firefox, Chromium, Nerd Font, maintenance timers
-- **Hardening:** sysctl hardening, rare network protocols blocked, sshd off (hardened config in place), persistent faillock, `su` limited to wheel
+- **Firewall:** nftables, default-deny for incoming connections
+- **Hardening:** sysctl hardening, rare network protocols blocked, sshd off (hardened config in place), persistent faillock (lock screen included), `su` limited to wheel
 
 ## Before you run it
 
@@ -31,7 +32,7 @@ As your normal user (not root):
 ```sh
 git clone https://github.com/chasehcs/arch-desktop.git
 cd arch-desktop
-./bootstrap.sh          # installs ansible if needed, asks for your sudo password once
+./bootstrap.sh          # upgrades the system and installs ansible first, then runs the playbook
 sudo reboot
 ```
 
@@ -66,6 +67,9 @@ Set your options in [`group_vars/all.yml`](group_vars/all.yml), or override them
 | `logitech_solaar_tray` | `false` | Keep Solaar in the tray for battery status (read the caveat first) |
 | `enable_spotify` | `true` | Official Spotify client and spotify-player |
 | `spotify_client_id` | `""` | Your own Spotify app's client ID for spotify-player; see [Spotify](#spotify) |
+| `enable_firewall` | `true` | nftables, default-deny incoming |
+| `firewall_allowed_tcp_ports` / `firewall_allowed_udp_ports` | `[]` | Ports to open; sshd's opens automatically when `sshd_enabled` |
+| `firewall_trust_docker_bridges` | `true` | Let containers reach services on the host |
 | `enable_hardening`, `sshd_enabled` | `true`, `false` | Sysctl and faillock values are in `roles/hardening/defaults/main.yml` |
 
 ## Hyprland keybindings
@@ -117,12 +121,13 @@ Trade-offs worth knowing about:
 - **Spotify:** the official client is closed-source and runs as your user. spotify-launcher checks Spotify's download against the signing key shipped in the Arch package. spotify-player streams through librespot, an unofficial reimplementation of Spotify's protocol, which technically goes against Spotify's terms and can break when Spotify changes things. Its login tokens in `~/.cache/spotify-player/` give access to your account, so treat them like a password.
 - **Docker group:** being in `docker` is root-equivalent. Set `docker_user_in_group: false` if you'd rather use `sudo docker` or rootless Docker.
 - **AUR:** paru is bootstrapped from the `paru-bin` PKGBUILD, a prebuilt release binary pinned by checksum. AUR packages are user-submitted, so read PKGBUILDs before adding anything to `aur_packages`.
-- **Temporary sudoers rule:** while installing `aur_packages`, a `NOPASSWD: /usr/bin/pacman` rule for your user is written to `/etc/sudoers.d/99-ansible-aur`. It's removed in an `always:` block even if the install fails, and it's never written when `aur_packages` is empty.
+- **Temporary sudoers rule:** while installing `aur_packages`, a `NOPASSWD: /usr/bin/pacman` rule for your user is written to `/etc/sudoers.d/99-ansible-aur`. It's removed in an `always:` block even if the install fails, and it's never written when `aur_packages` is empty. If a run is interrupted (Ctrl-C, crash, power loss) the `always:` block can't run, so every run also deletes a leftover rule as its first step; until then, run `sudo rm /etc/sudoers.d/99-ansible-aur`.
 - **ptrace:** `kernel.yama.ptrace_scope = 1`. `gdb ./prog` works, but attaching to a running process (`gdb -p`, `strace -p`) needs sudo.
-- **Reverse-path filtering:** `rp_filter` is strict (1). If a policy-routing VPN breaks, set it to 2 in `roles/hardening/defaults/main.yml`.
+- **Reverse-path filtering:** `rp_filter` is strict (1) on every interface, including ones created later. If a policy-routing VPN breaks, set it to 2 in `roles/hardening/defaults/main.yml`.
 - **faillock:** 5 failed logins in 15 minutes lock the account for 10 minutes. This applies to the login screen, sudo and hyprlock, and the lock survives a reboot. Clear it with `faillock --user <you> --reset`.
-- **`su`:** limited to `wheel` members.
-- **Not covered** (out of scope, or best done at install time): a firewall, disk encryption, Secure Boot, kernel command-line hardening (`lockdown=`, `init_on_alloc=`, ...), and locking the root password.
+- **`su`:** `su` and `su -` are limited to `wheel` members.
+- **Firewall:** incoming connections are dropped except replies, ping and IPv6 neighbour discovery, traffic from Docker containers (`firewall_trust_docker_bridges`), and ports you list. Ports Docker publishes with `-p` bypass it, because Docker routes them itself, so bind them to localhost (`-p 127.0.0.1:8080:80`) unless they're meant for the network. Check what's dropped with `sudo nft list table inet arch_desktop`.
+- **Not covered** (out of scope, or best done at install time): disk encryption, Secure Boot, kernel command-line hardening (`lockdown=`, `init_on_alloc=`, ...), and locking the root password.
 
 ## Layout
 
@@ -143,5 +148,6 @@ roles/
   dev/        Python, Node.js (fnm), Docker
   peripherals/ Logitech mouse tools (Piper, libratbag, Solaar)
   music/      Spotify official client and spotify-player
+  firewall/   nftables default-deny inbound
   hardening/  sysctl, module blacklist, sshd, faillock, su
 ```

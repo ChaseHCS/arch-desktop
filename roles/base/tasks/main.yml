@@ -18,6 +18,27 @@
     state: latest
     update_cache: true
 
+# bootstrap.sh upgrades before Ansible starts. If the playbook is run some
+# other way, don't let the upgrade swap Python or Ansible out from under it.
+- name: Check for pending Python or Ansible upgrades
+  ansible.builtin.command:
+    argv: [pacman, -Qqu]
+  register: base_pending_upgrades
+  changed_when: false
+  failed_when: base_pending_upgrades.rc not in [0, 1]
+  check_mode: false
+  when: pacman_full_upgrade | bool
+
+- name: Stop if the upgrade would replace Python or Ansible mid-run
+  ansible.builtin.assert:
+    that: base_pending_upgrades.stdout_lines | intersect(['python', 'ansible', 'ansible-core']) | length == 0
+    fail_msg: >-
+      Python or Ansible has a pending upgrade, which would be replaced under the
+      running playbook. Run ./bootstrap.sh (it upgrades first) or `sudo pacman -Syu`,
+      then run the playbook again.
+    quiet: true
+  when: pacman_full_upgrade | bool
+
 - name: Upgrade the whole system
   community.general.pacman:
     upgrade: true
@@ -40,26 +61,36 @@
 - name: Gather service facts
   ansible.builtin.service_facts:
 
-- name: Check whether systemd-networkd is managing the network
+# The tray applet (nm-applet) needs NetworkManager. If the base install uses a
+# different network manager, starting NetworkManager mid-run would fight it
+# for the interfaces (and drop Wi-Fi). iwd is only a conflict when it runs
+# without NetworkManager (with it, it's just NetworkManager's Wi-Fi backend).
+- name: Look for other network managers
   ansible.builtin.set_fact:
-    base_networkd_running: >-
-      {{ ansible_facts['services'].get('systemd-networkd.service', {}).get('state') == 'running' }}
+    base_nm_running: "{{ ansible_facts['services'].get('NetworkManager.service', {}).get('state') == 'running' }}"
+    base_other_netmgrs: >-
+      {{ ansible_facts['services'] | dict2items
+         | selectattr('value.state', 'equalto', 'running') | map(attribute='key')
+         | select('match', '^(systemd-networkd|iwd|dhcpcd|netctl|netctl-auto|connman)(@.*)?\.service$')
+         | list }}
 
-# The tray applet (nm-applet) needs NetworkManager. If the base install was done
-# with systemd-networkd instead, don't fight over the interfaces mid-run.
 - name: Enable NetworkManager
   ansible.builtin.systemd_service:
     name: NetworkManager.service
     enabled: true
     state: started
-  when: not (base_networkd_running | bool)
+  when: base_nm_running | bool or base_other_netmgrs | length == 0
 
-- name: Warn about systemd-networkd
+- name: Warn about the other network manager
   ansible.builtin.debug:
     msg: >-
-      systemd-networkd is running, so NetworkManager was left alone. To switch:
-      sudo systemctl disable --now systemd-networkd && sudo systemctl enable --now NetworkManager
-  when: base_networkd_running | bool
+      {{ base_other_netmgrs | join(', ') }} manages the network, so NetworkManager was
+      left alone (the Wi-Fi tray icon needs it). To switch after the run:
+      sudo systemctl disable --now {{ base_other_netmgrs | join(' ') }} &&
+      sudo systemctl enable --now NetworkManager
+  when:
+    - not (base_nm_running | bool)
+    - base_other_netmgrs | length > 0
 
 - name: Enable maintenance timers and time sync
   ansible.builtin.systemd_service:

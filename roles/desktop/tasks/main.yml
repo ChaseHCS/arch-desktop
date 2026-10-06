@@ -1,8 +1,12 @@
 ---
+# --ask=4 answers "yes" to pacman's conflict question only, so PipeWire can
+# replace pulseaudio/jack2 if the base install chose them (--noconfirm alone
+# answers "no" and aborts).
 - name: Install the PipeWire audio stack
   community.general.pacman:
     name: "{{ desktop_audio_packages }}"
     state: present
+    extra_args: --ask=4
 
 - name: Install fonts
   community.general.pacman:

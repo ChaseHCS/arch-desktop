@@ -1,7 +1,7 @@
 # fuzzel config, written by the arch-desktop playbook. See fuzzel.ini(5).
 
 [main]
-font={{ terminal_font }}:size={{ terminal_font_size + 1 }}
+font={{ terminal_font }}:size={{ terminal_font_size | int + 1 }}
 terminal={{ hypr_terminal }} -x
 layer=overlay
 width=45

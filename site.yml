@@ -11,6 +11,15 @@
         quiet: true
       tags: [always]
 
+    # The AUR role's temporary passwordless-pacman rule is normally removed in
+    # an always: block, which doesn't run if the play is interrupted (Ctrl-C,
+    # crash, power loss). Clean up on every run, whatever the tags.
+    - name: Remove a leftover temporary sudoers rule
+      ansible.builtin.file:
+        path: /etc/sudoers.d/99-ansible-aur
+        state: absent
+      tags: [always]
+
     - name: Ensure the desktop user is a regular account
       ansible.builtin.assert:
         that:
@@ -52,6 +61,7 @@
     - { role: dev, tags: [dev] }
     - { role: peripherals, tags: [peripherals] }
     - { role: music, tags: [music], when: enable_spotify | bool }
+    - { role: firewall, tags: [firewall], when: enable_firewall | bool }
     - { role: hardening, tags: [hardening], when: enable_hardening | bool }
 
   handlers:

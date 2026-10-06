@@ -1,0 +1,8 @@
+---
+# Loaded directly rather than via `systemctl reload`: the file only replaces
+# its own table, and nftables.service may not define a reload action.
+- name: Load firewall rules
+  ansible.builtin.command:
+    argv: [nft, -f, /etc/nftables.conf]
+  changed_when: true
+  when: firewall_running_kernel_modules.stat.exists

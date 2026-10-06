@@ -21,6 +21,7 @@
     path: /etc/ssh/sshd_config
     line: Include /etc/ssh/sshd_config.d/*.conf
     insertbefore: BOF
+  notify: Reload sshd
 
 - name: Ensure the sshd drop-in directory exists
   ansible.builtin.file:
@@ -37,6 +38,7 @@
     owner: root
     group: root
     mode: "0644"
+  notify: Reload sshd
 
 - name: Set sshd state
   ansible.builtin.systemd_service:
@@ -52,6 +54,21 @@
     group: root
     mode: "0755"
 
+# pam_faillock creates a user's tally file on the first failure, owned by the
+# user (mode 0660) so unprivileged lock screens can update it. hyprlock can't
+# create it in this root-owned directory, though, so until a login or sudo
+# prompt had failed once, lock-screen failures weren't counted. Create it up
+# front the same way pam_faillock would.
+- name: Create the desktop user's faillock tally file
+  ansible.builtin.file:
+    path: "{{ hardening_faillock.dir }}/{{ desktop_user }}"
+    state: touch
+    owner: "{{ desktop_user }}"
+    group: root
+    mode: "0660"
+    modification_time: preserve
+    access_time: preserve
+
 - name: Configure account lockout (pam_faillock)
   ansible.builtin.lineinfile:
     path: /etc/security/faillock.conf
@@ -61,8 +78,18 @@
   loop_control:
     label: "{{ item.key }}"
 
-- name: Restrict su to members of wheel
+# `su -` / `su -l` use their own PAM service (su-l), so both files need it.
+- name: Find su's PAM files
+  ansible.builtin.stat:
+    path: "/etc/pam.d/{{ item }}"
+  loop: [su, su-l]
+  register: hardening_su_pam
+
+- name: Restrict su and su - to members of wheel
   ansible.builtin.lineinfile:
-    path: /etc/pam.d/su
+    path: "{{ item.stat.path }}"
     regexp: '^#?\s*auth\s+required\s+pam_wheel\.so\s+use_uid'
     line: "auth            required        pam_wheel.so use_uid"
+  loop: "{{ hardening_su_pam.results | selectattr('stat.exists') | list }}"
+  loop_control:
+    label: "{{ item.stat.path }}"

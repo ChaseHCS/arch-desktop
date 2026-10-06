@@ -16,24 +16,24 @@ hardening_sysctl:
   fs.protected_fifos: 2
   fs.protected_regular: 2
   fs.suid_dumpable: 0
-  # Network: no redirects or source routing, strict reverse-path filtering.
-  # If a VPN with policy routing misbehaves, set rp_filter to 2 (loose).
-  net.ipv4.conf.all.rp_filter: 1
-  net.ipv4.conf.default.rp_filter: 1
-  net.ipv4.conf.all.accept_redirects: 0
-  net.ipv4.conf.default.accept_redirects: 0
-  net.ipv4.conf.all.secure_redirects: 0
-  net.ipv4.conf.default.secure_redirects: 0
-  net.ipv4.conf.all.send_redirects: 0
-  net.ipv4.conf.default.send_redirects: 0
-  net.ipv6.conf.all.accept_redirects: 0
-  net.ipv6.conf.default.accept_redirects: 0
-  net.ipv4.conf.all.accept_source_route: 0
-  net.ipv4.conf.default.accept_source_route: 0
-  net.ipv6.conf.all.accept_source_route: 0
-  net.ipv6.conf.default.accept_source_route: 0
   net.ipv4.tcp_syncookies: 1
   net.ipv4.tcp_rfc1337: 1
+
+# Per-interface network settings, written for `all`, `default` and every
+# interface (`*`). The glob matters: systemd's 50-default.conf sets
+# rp_filter=2 on each interface as it appears, and the kernel uses the higher
+# of `all` and the interface value, so `all` alone would leave filtering loose.
+# If a VPN with policy routing misbehaves, set rp_filter to 2 (loose).
+hardening_sysctl_interfaces:
+  ipv4:
+    rp_filter: 1
+    accept_redirects: 0
+    secure_redirects: 0
+    send_redirects: 0
+    accept_source_route: 0
+  ipv6:
+    accept_redirects: 0
+    accept_source_route: 0
 
 # Rarely used network protocols with a history of kernel CVEs.
 hardening_blacklisted_modules:

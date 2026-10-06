@@ -4,6 +4,9 @@ hyprland_packages:
   - hyprlock
   - hypridle
   - hyprpolkitagent
+  # Dialogs (app not responding, permission prompts); Hyprland warns at every
+  # login without it.
+  - hyprland-guiutils
   - xdg-desktop-portal-hyprland
   - xdg-desktop-portal-kde
   - qt6-wayland

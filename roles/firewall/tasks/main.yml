@@ -1,0 +1,34 @@
+---
+- name: Install nftables
+  community.general.pacman:
+    name: nftables
+    state: present
+
+# When pacman upgraded the kernel earlier in this run, the running kernel's
+# modules are gone until reboot, so nftables can't be loaded (or checked) now.
+- name: Check whether the running kernel can load modules
+  ansible.builtin.stat:
+    path: "/usr/lib/modules/{{ ansible_facts['kernel'] }}/kernel"
+  register: firewall_running_kernel_modules
+
+- name: Write the firewall rules
+  ansible.builtin.template:
+    src: nftables.conf.j2
+    dest: /etc/nftables.conf
+    owner: root
+    group: root
+    mode: "0644"
+    validate: "{{ 'nft -c -f %s' if firewall_running_kernel_modules.stat.exists else omit }}"
+  notify: Load firewall rules
+
+- name: Load the firewall rules at boot
+  ansible.builtin.systemd_service:
+    name: nftables.service
+    enabled: true
+
+- name: Note that the firewall starts after the reboot
+  ansible.builtin.debug:
+    msg: >-
+      The kernel was upgraded during this run, so the firewall rules couldn't be
+      loaded now. nftables.service loads them at the next boot.
+  when: not firewall_running_kernel_modules.stat.exists

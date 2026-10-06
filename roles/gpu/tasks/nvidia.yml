@@ -7,10 +7,14 @@
   check_mode: false
   failed_when: gpu_kernels.stdout_lines | length == 0
 
+# --ask=4 answers "yes" to pacman's conflict question only, so the DKMS driver
+# can replace the prebuilt nvidia-open/nvidia-open-lts that archinstall's
+# NVIDIA option installs (--noconfirm alone answers "no" and aborts).
 - name: Install kernel headers and the NVIDIA driver
   community.general.pacman:
     name: "{{ gpu_kernels.stdout_lines | map('regex_replace', '$', '-headers') | list + gpu_nvidia_packages }}"
     state: present
+    extra_args: --ask=4
   notify: Rebuild initramfs
 
 # Kernel mode setting is already the default in current nvidia-utils; it's
@@ -61,6 +65,25 @@
         group: root
         mode: "0644"
       notify: Rebuild initramfs
+
+    # A preset with ALL_config=/default_config= makes mkinitcpio run with -c,
+    # which ignores /etc/mkinitcpio.conf.d. Current presets leave it commented.
+    - name: Find mkinitcpio presets that bypass drop-in configs
+      ansible.builtin.command:
+        argv: [grep, -lE, '^[[:space:]]*[A-Za-z_]+_config=', -r, --include=*.preset, /etc/mkinitcpio.d]
+      register: gpu_presets_with_config
+      changed_when: false
+      failed_when: gpu_presets_with_config.rc > 1
+      check_mode: false
+
+    - name: Warn that early KMS won't apply
+      ansible.builtin.debug:
+        msg: >-
+          {{ gpu_presets_with_config.stdout_lines | join(', ') }} set an explicit config file,
+          so mkinitcpio ignores /etc/mkinitcpio.conf.d/nvidia.conf. Comment out the
+          *_config= lines, or add nvidia nvidia_modeset nvidia_uvm nvidia_drm to MODULES
+          in /etc/mkinitcpio.conf yourself.
+      when: gpu_presets_with_config.stdout_lines | length > 0
 
     # The kms hook would pull nouveau into the initramfs, where it can grab the
     # card before the NVIDIA module loads.

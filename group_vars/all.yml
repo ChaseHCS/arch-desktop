@@ -1,11 +1,15 @@
 ---
 # Main knobs for the desktop. Everything here can also be overridden on the
-# command line, e.g. `ansible-playbook site.yml -e gpu_vendor=amd`.
+# command line, e.g. `./bootstrap.sh -e gpu_vendor=amd`. `-e key=value` always
+# passes a string; use JSON for booleans, numbers and lists, e.g.
+# `-e '{"enable_docker": false, "extra_packages": ["htop"]}'`.
 
 # --- User -------------------------------------------------------------------
 # The account the desktop is set up for. Defaults to whoever launched the
-# playbook (works with or without sudo).
-desktop_user: "{{ lookup('env', 'SUDO_USER') or lookup('env', 'USER') }}"
+# playbook; SUDO_USER is only used if it was started as root.
+desktop_user: >-
+  {{ lookup('env', 'USER') if lookup('env', 'USER') not in ['', 'root']
+     else lookup('env', 'SUDO_USER') }}
 
 # Dotfiles (zshrc, hyprland.lua, tmux.conf, ...) are only written when missing,
 # so re-running the playbook never clobbers your edits. Set to true to force a
@@ -119,6 +123,20 @@ enable_spotify: true
 # client ID, which can hit rate limits. It's a public identifier; never put the
 # app's client *secret* here (PKCE login doesn't need one).
 spotify_client_id: ""
+
+# --- Firewall ---------------------------------------------------------------
+# nftables: incoming connections are dropped unless listed here; outgoing
+# traffic is unrestricted. sshd's port opens automatically if sshd_enabled.
+enable_firewall: true
+# e.g. firewall_allowed_udp_ports: [57621] for Spotify Connect discovery by
+# devices not signed in to your account (your own devices don't need it).
+firewall_allowed_tcp_ports: []
+firewall_allowed_udp_ports: []
+# Let Docker containers reach services on the host (e.g. a local database).
+# Ports published with `-p` bypass this firewall entirely (Docker routes them
+# itself), so bind them to localhost (-p 127.0.0.1:8080:80) unless you mean
+# to expose them to the network.
+firewall_trust_docker_bridges: true
 
 # --- Hardening --------------------------------------------------------------
 enable_hardening: true

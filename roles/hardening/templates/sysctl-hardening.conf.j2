@@ -2,3 +2,14 @@
 {% for key, value in hardening_sysctl | dictsort %}
 {{ key }} = {{ value }}
 {% endfor %}
+
+# Network, per interface. systemd-sysctl re-applies the glob entries to each
+# interface as it appears (via udev), so they also cover interfaces created
+# later (Wi-Fi, VPN, Docker bridges).
+{% for family, settings in hardening_sysctl_interfaces | dictsort %}
+{% for key, value in settings | dictsort %}
+net.{{ family }}.conf.all.{{ key }} = {{ value }}
+net.{{ family }}.conf.default.{{ key }} = {{ value }}
+net.{{ family }}.conf.*.{{ key }} = {{ value }}
+{% endfor %}
+{% endfor %}

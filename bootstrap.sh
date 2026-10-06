@@ -10,8 +10,8 @@ fi
 
 cd "$(dirname "$(readlink -f "$0")")"
 
-if ! command -v ansible-playbook >/dev/null 2>&1; then
-  sudo pacman -Syu --needed ansible git
-fi
+# Upgrade before Ansible starts. Doing it inside the play could replace
+# Python or Ansible under the running playbook.
+sudo pacman -Syu --needed ansible git
 
 exec ansible-playbook site.yml "$@"

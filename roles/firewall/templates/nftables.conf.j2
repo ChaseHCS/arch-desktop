@@ -1,0 +1,41 @@
+#!/usr/bin/nft -f
+# Managed by Ansible (arch-desktop). Local edits will be overwritten.
+#
+# Default-deny for incoming connections; outgoing traffic is unrestricted.
+# Only this table is replaced (no "flush ruleset"), so Docker's own rules
+# survive a reload. Inspect with: sudo nft list table inet arch_desktop
+
+table inet arch_desktop
+delete table inet arch_desktop
+
+table inet arch_desktop {
+	chain input {
+		type filter hook input priority filter; policy drop;
+
+		ct state established,related accept
+		ct state invalid drop
+		iif "lo" accept
+
+		# Ping, path MTU discovery, IPv6 neighbour/router discovery
+		meta l4proto { icmp, ipv6-icmp } accept
+
+		# DHCPv6 replies to this machine's client
+		ip6 saddr fe80::/10 udp sport 547 udp dport 546 accept
+{% if firewall_trust_docker_bridges | bool %}
+
+		# Docker containers reaching services on the host
+		iifname "docker0" accept
+		iifname "br-*" accept
+{% endif %}
+{% if firewall_tcp_ports | length > 0 %}
+
+		tcp dport { {{ firewall_tcp_ports | join(', ') }} } accept
+{% endif %}
+{% if firewall_allowed_udp_ports | length > 0 %}
+
+		udp dport { {{ firewall_allowed_udp_ports | join(', ') }} } accept
+{% endif %}
+
+		counter comment "dropped by policy"
+	}
+}
