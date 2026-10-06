@@ -1,0 +1,8 @@
+---
+terminal_packages:
+  - terminator
+  - tmux
+
+terminal_templates:
+  - { src: terminator.conf.j2, dest: .config/terminator/config }
+  - { src: tmux.conf.j2, dest: .config/tmux/tmux.conf }

@@ -1,0 +1,246 @@
+-- Hyprland config (Lua, Hyprland >= 0.55), written by the arch-desktop playbook.
+-- The playbook won't overwrite this file unless dotfiles_overwrite=true.
+-- Docs: https://wiki.hypr.land/configuring/
+
+------------------
+---- MONITORS ----
+------------------
+
+-- `hyprctl monitors all` lists outputs and modes.
+{% for m in hypr_monitors %}
+hl.monitor({
+    output   = "{{ m.output }}",
+    mode     = "{{ m.mode }}",
+    position = "{{ m.position }}",
+    scale    = "{{ m.scale }}",
+})
+{% endfor %}
+
+
+------------------
+---- PROGRAMS ----
+------------------
+
+local terminal    = "{{ hypr_terminal }}"
+local fileManager = "{{ hypr_file_manager }}"
+local menu        = "{{ hypr_menu }}"
+local browser     = "{{ hypr_browser }}"
+
+
+-------------------
+---- AUTOSTART ----
+-------------------
+
+-- Started from here rather than as systemd user services so none of this
+-- runs when you log into Plasma instead.
+hl.on("hyprland.start", function()
+    hl.exec_cmd("waybar")
+    hl.exec_cmd("mako")
+    hl.exec_cmd("hypridle")
+    hl.exec_cmd("nm-applet --indicator")
+    hl.exec_cmd("systemctl --user start hyprpolkitagent")
+    hl.exec_cmd("wl-paste --type text --watch cliphist store")
+    hl.exec_cmd("wl-paste --type image --watch cliphist store")
+end)
+
+
+-------------------------------
+---- ENVIRONMENT VARIABLES ----
+-------------------------------
+
+hl.env("XCURSOR_SIZE", "24")
+hl.env("HYPRCURSOR_SIZE", "24")
+hl.env("QT_QPA_PLATFORM", "wayland;xcb")
+-- Qt apps pick up the Plasma theme and colours (System Settings) here too.
+hl.env("QT_QPA_PLATFORMTHEME", "kde")
+hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
+{% if gpu_vendor == 'nvidia' %}
+
+-- NVIDIA
+hl.env("LIBVA_DRIVER_NAME", "nvidia")
+hl.env("NVD_BACKEND", "direct")
+-- Remove this one if screen sharing in Discord/Zoom misbehaves.
+hl.env("__GLX_VENDOR_LIBRARY_NAME", "nvidia")
+{% endif %}
+
+
+-----------------------
+---- LOOK AND FEEL ----
+-----------------------
+
+hl.config({
+    general = {
+        gaps_in     = 4,
+        gaps_out    = 8,
+        border_size = 2,
+
+        col = {
+            active_border   = { colors = { "rgba(7aa2f7ee)", "rgba(bb9af7ee)" }, angle = 45 },
+            inactive_border = "rgba(414868aa)",
+        },
+
+        resize_on_border = true,
+        allow_tearing    = false,
+        layout           = "dwindle",
+    },
+
+    decoration = {
+        rounding = 8,
+
+        active_opacity   = 1.0,
+        inactive_opacity = 1.0,
+
+        shadow = {
+            enabled      = true,
+            range        = 4,
+            render_power = 3,
+            color        = 0xee1a1a1a,
+        },
+
+        blur = {
+            enabled = true,
+            size    = 3,
+            passes  = 1,
+        },
+    },
+
+    animations = {
+        enabled = true,
+    },
+
+    dwindle = {
+        preserve_split = true,
+    },
+
+    misc = {
+        force_default_wallpaper = -1,
+        disable_hyprland_logo   = false,
+    },
+})
+
+hl.curve("easeOutQuint", { type = "bezier", points = { { 0.23, 1 }, { 0.32, 1 } } })
+hl.curve("linear",       { type = "bezier", points = { { 0, 0 }, { 1, 1 } } })
+hl.curve("almostLinear", { type = "bezier", points = { { 0.5, 0.5 }, { 0.75, 1 } } })
+hl.curve("quick",        { type = "bezier", points = { { 0.15, 0 }, { 0.1, 1 } } })
+
+hl.animation({ leaf = "global",     enabled = true, speed = 10,   bezier = "default" })
+hl.animation({ leaf = "border",     enabled = true, speed = 5.39, bezier = "easeOutQuint" })
+hl.animation({ leaf = "windows",    enabled = true, speed = 4.79, bezier = "easeOutQuint" })
+hl.animation({ leaf = "windowsIn",  enabled = true, speed = 4.1,  bezier = "easeOutQuint", style = "popin 87%" })
+hl.animation({ leaf = "windowsOut", enabled = true, speed = 1.49, bezier = "linear",       style = "popin 87%" })
+hl.animation({ leaf = "fadeIn",     enabled = true, speed = 1.73, bezier = "almostLinear" })
+hl.animation({ leaf = "fadeOut",    enabled = true, speed = 1.46, bezier = "almostLinear" })
+hl.animation({ leaf = "fade",       enabled = true, speed = 3.03, bezier = "quick" })
+hl.animation({ leaf = "layers",     enabled = true, speed = 3.81, bezier = "easeOutQuint" })
+hl.animation({ leaf = "workspaces", enabled = true, speed = 1.94, bezier = "almostLinear", style = "fade" })
+
+
+---------------
+---- INPUT ----
+---------------
+
+hl.config({
+    input = {
+        kb_layout  = "{{ hypr_kb_layout }}",
+        kb_variant = "{{ hypr_kb_variant }}",
+        kb_options = "{{ hypr_kb_options }}",
+
+        follow_mouse = 1,
+        sensitivity  = 0,
+    },
+})
+
+
+---------------------
+---- KEYBINDINGS ----
+---------------------
+
+local mainMod = "SUPER"
+
+-- Apps
+hl.bind(mainMod .. " + Return", hl.dsp.exec_cmd(terminal))
+hl.bind(mainMod .. " + D",      hl.dsp.exec_cmd(menu))
+hl.bind(mainMod .. " + E",      hl.dsp.exec_cmd(fileManager))
+hl.bind(mainMod .. " + B",      hl.dsp.exec_cmd(browser))
+
+-- Session
+hl.bind(mainMod .. " + Escape",    hl.dsp.exec_cmd("loginctl lock-session"))
+hl.bind(mainMod .. " + SHIFT + E", hl.dsp.exec_cmd("command -v hyprshutdown >/dev/null 2>&1 && hyprshutdown || hyprctl dispatch 'hl.dsp.exit()'"))
+
+-- Windows
+hl.bind(mainMod .. " + Q", hl.dsp.window.close())
+hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen())
+hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
+hl.bind(mainMod .. " + P", hl.dsp.window.pseudo())
+hl.bind(mainMod .. " + T", hl.dsp.layout("togglesplit"))
+
+-- Focus with SUPER + arrows / hjkl, move windows with SUPER + SHIFT + the same
+for _, d in ipairs({ { "left", "H" }, { "right", "L" }, { "up", "K" }, { "down", "J" } }) do
+    local direction, vimKey = d[1], d[2]
+    hl.bind(mainMod .. " + " .. direction,         hl.dsp.focus({ direction = direction }))
+    hl.bind(mainMod .. " + " .. vimKey,            hl.dsp.focus({ direction = direction }))
+    hl.bind(mainMod .. " + SHIFT + " .. direction, hl.dsp.window.move({ direction = direction }))
+    hl.bind(mainMod .. " + SHIFT + " .. vimKey,    hl.dsp.window.move({ direction = direction }))
+end
+
+-- Workspaces 1-10 (SUPER + 0 is workspace 10)
+for i = 1, 10 do
+    local key = i % 10
+    hl.bind(mainMod .. " + " .. key,         hl.dsp.focus({ workspace = i }))
+    hl.bind(mainMod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = i }))
+end
+
+-- Scratchpad
+hl.bind(mainMod .. " + S",         hl.dsp.workspace.toggle_special("magic"))
+hl.bind(mainMod .. " + SHIFT + S", hl.dsp.window.move({ workspace = "special:magic" }))
+
+-- Scroll through workspaces, drag/resize windows with the mouse
+hl.bind(mainMod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }))
+hl.bind(mainMod .. " + mouse_up",   hl.dsp.focus({ workspace = "e-1" }))
+hl.bind(mainMod .. " + mouse:272",  hl.dsp.window.drag(),   { mouse = true })
+hl.bind(mainMod .. " + mouse:273",  hl.dsp.window.resize(), { mouse = true })
+
+-- Screenshots: region to clipboard / full screen to ~/Pictures/Screenshots
+hl.bind("Print",         hl.dsp.exec_cmd('grim -g "$(slurp -d)" - | wl-copy'))
+hl.bind("SHIFT + Print", hl.dsp.exec_cmd('mkdir -p ~/Pictures/Screenshots && grim ~/Pictures/Screenshots/"$(date +%Y%m%d-%H%M%S)".png'))
+
+-- Clipboard history
+hl.bind(mainMod .. " + C", hl.dsp.exec_cmd("cliphist list | fuzzel --dmenu | cliphist decode | wl-copy"))
+
+-- Media keys
+hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"), { locked = true, repeating = true })
+hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"),      { locked = true, repeating = true })
+hl.bind("XF86AudioMute",        hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"),     { locked = true })
+hl.bind("XF86AudioMicMute",     hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"),   { locked = true })
+hl.bind("XF86AudioNext",        hl.dsp.exec_cmd("playerctl next"),       { locked = true })
+hl.bind("XF86AudioPrev",        hl.dsp.exec_cmd("playerctl previous"),   { locked = true })
+hl.bind("XF86AudioPlay",        hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
+hl.bind("XF86AudioPause",       hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
+
+
+----------------------
+---- WINDOW RULES ----
+----------------------
+
+hl.window_rule({
+    -- Ignore maximize requests from apps; tiling decides window sizes.
+    name  = "suppress-maximize-events",
+    match = { class = ".*" },
+
+    suppress_event = "maximize",
+})
+
+hl.window_rule({
+    -- Fix some dragging issues with XWayland
+    name  = "fix-xwayland-drags",
+    match = {
+        class      = "^$",
+        title      = "^$",
+        xwayland   = true,
+        float      = true,
+        fullscreen = false,
+        pin        = false,
+    },
+
+    no_focus = true,
+})

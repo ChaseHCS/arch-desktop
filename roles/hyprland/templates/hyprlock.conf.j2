@@ -1,0 +1,72 @@
+# hyprlock config, written by the arch-desktop playbook.
+# Docs: https://wiki.hypr.land/hypr-ecosystem/user/hyprlock/
+
+$font = {{ terminal_font }}
+
+general {
+    hide_cursor = true
+}
+
+animations {
+    enabled = true
+    bezier = linear, 1, 1, 0, 0
+    animation = fadeIn, 1, 5, linear
+    animation = fadeOut, 1, 5, linear
+    animation = inputFieldDots, 1, 2, linear
+}
+
+background {
+    monitor =
+    path = screenshot
+    blur_passes = 3
+    color = rgba(26, 27, 38, 1.0)
+}
+
+input-field {
+    monitor =
+    size = 20%, 5%
+    outline_thickness = 3
+    inner_color = rgba(26, 27, 38, 0.6)
+
+    outer_color = rgba(7aa2f7ee) rgba(bb9af7ee) 45deg
+    check_color = rgba(9ece6aee) rgba(7dcfffee) 120deg
+    fail_color = rgba(f7768eee) rgba(ff9e64ee) 40deg
+
+    font_color = rgb(192, 202, 245)
+    fade_on_empty = false
+    rounding = 12
+
+    font_family = $font
+    placeholder_text = Password...
+    fail_text = $PAMFAIL
+
+    dots_spacing = 0.3
+
+    position = 0, -20
+    halign = center
+    valign = center
+}
+
+label {
+    monitor =
+    text = $TIME
+    font_size = 90
+    font_family = $font
+    color = rgb(192, 202, 245)
+
+    position = -30, 0
+    halign = right
+    valign = top
+}
+
+label {
+    monitor =
+    text = cmd[update:60000] date +"%A, %d %B %Y"
+    font_size = 25
+    font_family = $font
+    color = rgb(192, 202, 245)
+
+    position = -30, -150
+    halign = right
+    valign = top
+}

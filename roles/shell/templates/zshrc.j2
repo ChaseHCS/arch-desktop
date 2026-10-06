@@ -1,0 +1,38 @@
+# ~/.zshrc, written by the arch-desktop playbook. The playbook won't overwrite
+# it unless dotfiles_overwrite=true. Machine-local tweaks go in ~/.zshrc.local.
+
+export ZSH="$HOME/.oh-my-zsh"
+ZSH_THEME="{{ zsh_theme }}"
+
+zstyle ':omz:update' mode reminder
+zstyle ':omz:plugins:fnm' autostart yes
+zstyle ':omz:plugins:fnm' use-on-cd yes
+
+plugins=({{ omz_plugins | join(' ') }})
+
+source "$ZSH/oh-my-zsh.sh"
+
+# --- Environment -------------------------------------------------------------
+export EDITOR=nvim
+export VISUAL=nvim
+export MANPAGER="nvim +Man!"
+typeset -U path
+path=("$HOME/.local/bin" $path)
+
+# --- History -----------------------------------------------------------------
+HISTSIZE=100000
+SAVEHIST=100000
+setopt HIST_IGNORE_ALL_DUPS HIST_IGNORE_SPACE SHARE_HISTORY
+
+# --- Aliases -----------------------------------------------------------------
+alias vim=nvim
+alias ls='eza --group-directories-first'
+alias ll='eza -lah --git --group-directories-first'
+alias tree='eza --tree'
+alias lg=lazygit
+
+# --- Plugins from the Arch repos (syntax highlighting must load last) --------
+source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+
+[[ -f "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"

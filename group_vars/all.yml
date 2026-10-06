@@ -1,0 +1,101 @@
+---
+# Main knobs for the desktop. Everything here can also be overridden on the
+# command line, e.g. `ansible-playbook site.yml -e gpu_vendor=amd`.
+
+# --- User -------------------------------------------------------------------
+# The account the desktop is set up for. Defaults to whoever launched the
+# playbook (works with or without sudo).
+desktop_user: "{{ lookup('env', 'SUDO_USER') or lookup('env', 'USER') }}"
+
+# Dotfiles (zshrc, hyprland.lua, tmux.conf, ...) are only written when missing,
+# so re-running the playbook never clobbers your edits. Set to true to force a
+# re-render; the previous file is kept as a timestamped backup next to it.
+dotfiles_overwrite: false
+
+# --- Packages ---------------------------------------------------------------
+# Run `pacman -Syu` before installing anything (Arch doesn't support partial
+# upgrades, so leave this on unless you know why you're turning it off).
+pacman_full_upgrade: true
+pacman_parallel_downloads: 5
+
+# Extra packages from the official repos / the AUR.
+extra_packages: []
+aur_packages: []
+
+# --- GPU --------------------------------------------------------------------
+# nvidia | amd | intel | none
+gpu_vendor: nvidia
+# nvidia-open-dkms supports Turing (RTX 20 / GTX 16) and newer. Pascal (GTX 10)
+# and older are no longer supported by the 590+ driver; those cards need the
+# AUR nvidia-580xx-* packages instead, which this playbook doesn't manage.
+nvidia_driver_package: nvidia-open-dkms
+# Put the NVIDIA modules in the initramfs (early KMS).
+nvidia_early_kms: true
+
+# --- Desktop ----------------------------------------------------------------
+# plasmalogin: KDE's Plasma Login Manager (the Plasma default since 6.6; a fork
+#              of SDDM fixed to the Breeze theme, configured in System Settings)
+# sddm:        classic SDDM with the Breeze theme
+display_manager: plasmalogin
+browsers:
+  - firefox
+  - chromium
+enable_bluetooth: false
+
+# --- Hyprland ---------------------------------------------------------------
+hypr_terminal: terminator
+hypr_file_manager: dolphin
+hypr_menu: fuzzel
+hypr_browser: firefox
+hypr_kb_layout: us
+hypr_kb_variant: ""
+hypr_kb_options: ""
+# One entry per monitor. The default rule picks the preferred mode for any
+# connected display. Example for a specific output:
+#   - { output: DP-1, mode: "2560x1440@165", position: "0x0", scale: "1" }
+hypr_monitors:
+  - { output: "", mode: preferred, position: auto, scale: auto }
+# Idle timers (seconds): lock the session, then turn displays off.
+hypr_idle_lock_after: 600
+hypr_idle_dpms_after: 900
+
+# --- Shell / terminal -------------------------------------------------------
+zsh_theme: robbyrussell
+omz_plugins:
+  - git
+  - sudo
+  - fzf
+  - tmux
+  - python
+  - uv
+  - fnm
+  - docker
+  - docker-compose
+terminal_font: "JetBrainsMono Nerd Font"
+terminal_font_size: 11
+
+# --- Neovim -----------------------------------------------------------------
+# LazyVim extras enabled on first install (written to lazyvim.json only if
+# that file doesn't exist yet; manage them later with :LazyExtras).
+lazyvim_extras:
+  - lazyvim.plugins.extras.lang.python
+  - lazyvim.plugins.extras.lang.typescript
+  - lazyvim.plugins.extras.lang.json
+  - lazyvim.plugins.extras.lang.yaml
+  - lazyvim.plugins.extras.lang.toml
+  - lazyvim.plugins.extras.lang.markdown
+  - lazyvim.plugins.extras.lang.docker
+  - lazyvim.plugins.extras.lang.ansible
+
+# --- Dev toolchains ---------------------------------------------------------
+enable_python: true
+enable_nodejs: true
+enable_docker: true
+# Membership of the docker group is equivalent to root. Set to false to use
+# `sudo docker` (or set up rootless Docker yourself).
+docker_user_in_group: true
+
+# --- Hardening --------------------------------------------------------------
+enable_hardening: true
+# Keep sshd disabled. The hardened sshd drop-in is written either way.
+sshd_enabled: false

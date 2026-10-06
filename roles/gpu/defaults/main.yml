@@ -1,0 +1,15 @@
+---
+gpu_mesa_packages:
+  amd: [mesa, vulkan-radeon]
+  intel: [mesa, vulkan-intel, intel-media-driver]
+  none: [mesa]
+
+gpu_nvidia_packages:
+  - "{{ nvidia_driver_package }}"
+  - nvidia-utils
+  - nvidia-settings
+  - egl-wayland
+  - libva-nvidia-driver
+
+# Kernels whose headers are installed so DKMS can build the NVIDIA module.
+gpu_kernel_candidates: [linux, linux-lts, linux-zen, linux-hardened]

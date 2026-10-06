@@ -1,0 +1,98 @@
+---
+- name: Check whether paru is installed
+  ansible.builtin.stat:
+    path: /usr/bin/paru
+  register: aur_paru_bin
+
+- name: Bootstrap paru from the AUR
+  when:
+    - not aur_paru_bin.stat.exists
+    - not ansible_check_mode
+  block:
+    - name: Create a build directory
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: -paru
+      register: aur_build_dir
+      become: true
+      become_user: "{{ desktop_user }}"
+
+    - name: Clone the paru PKGBUILD
+      ansible.builtin.git:
+        repo: "{{ aur_helper_repo }}"
+        dest: "{{ aur_build_dir.path }}/{{ aur_helper_package }}"
+        depth: 1
+        version: master
+      become: true
+      become_user: "{{ desktop_user }}"
+
+    # makepkg refuses to run as root, so build as the desktop user and install
+    # the resulting package with pacman as root. base-devel is already present.
+    - name: Build paru
+      ansible.builtin.command:
+        cmd: makepkg --noconfirm --clean
+        chdir: "{{ aur_build_dir.path }}/{{ aur_helper_package }}"
+      become: true
+      become_user: "{{ desktop_user }}"
+      changed_when: true
+
+    - name: Locate the built package
+      ansible.builtin.command:
+        cmd: makepkg --packagelist
+        chdir: "{{ aur_build_dir.path }}/{{ aur_helper_package }}"
+      become: true
+      become_user: "{{ desktop_user }}"
+      register: aur_pkglist
+      changed_when: false
+
+    - name: Install paru
+      community.general.pacman:
+        name: "{{ aur_pkglist.stdout_lines | select('search', '/' ~ aur_helper_package ~ '-[0-9]') | first }}"
+        state: present
+
+  always:
+    - name: Remove the build directory
+      ansible.builtin.file:
+        path: "{{ aur_build_dir.path }}"
+        state: absent
+      when: aur_build_dir.path is defined
+
+- name: Find AUR packages that are already installed
+  ansible.builtin.command:
+    argv: "{{ ['pacman', '-Qq'] + aur_packages }}"
+  register: aur_installed
+  changed_when: false
+  check_mode: false
+  failed_when: false
+  when: aur_packages | length > 0
+
+- name: Install AUR packages
+  vars:
+    aur_missing: "{{ aur_packages | difference(aur_installed.stdout_lines) }}"
+  when:
+    - aur_packages | length > 0
+    - aur_missing | length > 0
+  block:
+    # paru calls `sudo pacman`, which can't prompt for a password here. Allow
+    # passwordless pacman for the duration of this block only.
+    - name: Temporarily allow passwordless pacman for the AUR helper
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/99-ansible-aur
+        content: "{{ desktop_user }} ALL=(root) NOPASSWD: /usr/bin/pacman\n"
+        owner: root
+        group: root
+        mode: "0440"
+        validate: visudo -cf %s
+
+    - name: Build and install AUR packages with paru
+      ansible.builtin.command:
+        argv: "{{ ['paru', '-S', '--needed', '--noconfirm', '--skipreview'] + aur_missing }}"
+      become: true
+      become_user: "{{ desktop_user }}"
+      changed_when: true
+
+  always:
+    - name: Remove the temporary sudoers rule
+      ansible.builtin.file:
+        path: /etc/sudoers.d/99-ansible-aur
+        state: absent

@@ -1,0 +1,45 @@
+---
+- name: Install Python tooling
+  community.general.pacman:
+    name: "{{ dev_python_packages }}"
+    state: present
+  when: enable_python
+
+- name: Install Node.js and fnm
+  community.general.pacman:
+    name: "{{ dev_nodejs_packages }}"
+    state: present
+  when: enable_nodejs
+
+# Also sets the `default` and `lts-latest` aliases on first install.
+- name: Install the current Node.js LTS with fnm
+  ansible.builtin.command:
+    argv: [fnm, install, --lts]
+  become: true
+  become_user: "{{ desktop_user }}"
+  register: dev_fnm_install
+  changed_when: "'already installed' not in dev_fnm_install.stderr"
+  when: enable_nodejs
+
+- name: Install Docker
+  community.general.pacman:
+    name: "{{ dev_docker_packages }}"
+    state: present
+  when: enable_docker
+
+# Socket activation: dockerd starts on first use instead of at every boot.
+- name: Enable the Docker socket
+  ansible.builtin.systemd_service:
+    name: docker.socket
+    enabled: true
+    state: started
+  when: enable_docker
+
+- name: Add the desktop user to the docker group
+  ansible.builtin.user:
+    name: "{{ desktop_user }}"
+    groups: docker
+    append: true
+  when:
+    - enable_docker
+    - docker_user_in_group

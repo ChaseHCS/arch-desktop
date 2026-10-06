@@ -1,0 +1,35 @@
+# Terminator config (Tokyo Night), written by the arch-desktop playbook.
+# Profiles: "default" is a plain shell; "tmux" attaches to (or creates) the
+# tmux session "main". Switch with right-click > Profiles, or launch with
+# `terminator -p tmux`.
+{% macro look() %}
+    use_system_font = False
+    font = {{ terminal_font }} {{ terminal_font_size }}
+    background_color = "#1a1b26"
+    foreground_color = "#c0caf5"
+    palette = "#15161e:#f7768e:#9ece6a:#e0af68:#7aa2f7:#bb9af7:#7dcfff:#a9b1d6:#414868:#f7768e:#9ece6a:#e0af68:#7aa2f7:#bb9af7:#7dcfff:#c0caf5"
+    scrollback_lines = 10000
+    scrollbar_position = hidden
+    show_titlebar = False
+{%- endmacro %}
+[global_config]
+  inactive_color_offset = 0.85
+  title_transmit_bg_color = "#7aa2f7"
+[keybindings]
+[profiles]
+  [[default]]
+{{ look() }}
+  [[tmux]]
+{{ look() }}
+    use_custom_command = True
+    custom_command = tmux new-session -A -s main
+[layouts]
+  [[default]]
+    [[[window0]]]
+      type = Window
+      parent = ""
+    [[[child1]]]
+      type = Terminal
+      parent = window0
+      profile = default
+[plugins]

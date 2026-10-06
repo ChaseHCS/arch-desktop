@@ -1,0 +1,30 @@
+---
+# Installed first so these win pacman's provider prompts (jack, ttf-font)
+# when Plasma's dependencies are resolved.
+desktop_audio_packages:
+  - pipewire
+  - pipewire-alsa
+  - pipewire-pulse
+  - pipewire-jack
+  - wireplumber
+
+desktop_font_packages:
+  - noto-fonts
+  - noto-fonts-emoji
+  - noto-fonts-cjk
+  - ttf-jetbrains-mono-nerd
+
+desktop_plasma_packages:
+  - plasma-meta
+  - plasma-login-manager
+  - dolphin
+  - ark
+  - spectacle
+  - okular
+  - gwenview
+  - xdg-user-dirs
+  - xdg-utils
+
+desktop_bluetooth_packages:
+  - bluez
+  - bluez-utils

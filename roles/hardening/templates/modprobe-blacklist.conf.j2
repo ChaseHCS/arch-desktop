@@ -1,0 +1,5 @@
+# Managed by Ansible (arch-desktop). Local edits will be overwritten.
+{% for mod in hardening_blacklisted_modules %}
+install {{ mod }} /bin/false
+blacklist {{ mod }}
+{% endfor %}

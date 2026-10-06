@@ -1,0 +1,72 @@
+---
+- name: Tune pacman.conf
+  ansible.builtin.lineinfile:
+    path: /etc/pacman.conf
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    insertafter: '^\[options\]'
+  loop:
+    - { regexp: '^#?Color$', line: Color }
+    - { regexp: '^#?VerbosePkgLists$', line: VerbosePkgLists }
+    - { regexp: '^#?ParallelDownloads', line: "ParallelDownloads = {{ pacman_parallel_downloads }}" }
+  loop_control:
+    label: "{{ item.line }}"
+
+- name: Refresh package databases and the keyring
+  community.general.pacman:
+    name: archlinux-keyring
+    state: latest
+    update_cache: true
+
+- name: Upgrade the whole system
+  community.general.pacman:
+    upgrade: true
+  when: pacman_full_upgrade
+
+- name: Install base packages
+  community.general.pacman:
+    name: "{{ base_packages + extra_packages }}"
+    state: present
+
+- name: Install CPU microcode
+  community.general.pacman:
+    name: "{{ 'intel-ucode' if 'GenuineIntel' in ansible_facts['processor'] else 'amd-ucode' }}"
+    state: present
+  when: >-
+    'GenuineIntel' in ansible_facts['processor']
+    or 'AuthenticAMD' in ansible_facts['processor']
+  notify: Rebuild initramfs
+
+- name: Gather service facts
+  ansible.builtin.service_facts:
+
+- name: Check whether systemd-networkd is managing the network
+  ansible.builtin.set_fact:
+    base_networkd_running: >-
+      {{ ansible_facts['services'].get('systemd-networkd.service', {}).get('state') == 'running' }}
+
+# Plasma's network applet needs NetworkManager. If the base install was done
+# with systemd-networkd instead, don't fight over the interfaces mid-run.
+- name: Enable NetworkManager
+  ansible.builtin.systemd_service:
+    name: NetworkManager.service
+    enabled: true
+    state: started
+  when: not (base_networkd_running | bool)
+
+- name: Warn about systemd-networkd
+  ansible.builtin.debug:
+    msg: >-
+      systemd-networkd is running, so NetworkManager was left alone. To switch:
+      sudo systemctl disable --now systemd-networkd && sudo systemctl enable --now NetworkManager
+  when: base_networkd_running | bool
+
+- name: Enable maintenance timers and time sync
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - fstrim.timer
+    - paccache.timer
+    - systemd-timesyncd.service

@@ -1,0 +1,16 @@
+---
+- name: Check the GPU vendor setting
+  ansible.builtin.assert:
+    that: gpu_vendor in ['nvidia', 'amd', 'intel', 'none']
+    fail_msg: "gpu_vendor must be one of nvidia, amd, intel, none (got {{ gpu_vendor }})"
+    quiet: true
+
+- name: Install Mesa and Vulkan drivers
+  community.general.pacman:
+    name: "{{ gpu_mesa_packages[gpu_vendor] }}"
+    state: present
+  when: gpu_vendor != 'nvidia'
+
+- name: Set up the NVIDIA driver
+  ansible.builtin.include_tasks: nvidia.yml
+  when: gpu_vendor == 'nvidia'

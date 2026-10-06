@@ -1,0 +1,4 @@
+# Managed by Ansible (arch-desktop). Local edits will be overwritten.
+{% for key, value in hardening_sysctl | dictsort %}
+{{ key }} = {{ value }}
+{% endfor %}

@@ -1,0 +1,31 @@
+---
+base_packages:
+  - base-devel
+  - git
+  - openssh
+  - curl
+  - wget
+  - rsync
+  - unzip
+  - zip
+  - man-db
+  - man-pages
+  - less
+  - bash-completion
+  - htop
+  - btop
+  - jq
+  - ripgrep
+  - fd
+  - fzf
+  - bat
+  - eza
+  - tree
+  - lsof
+  - strace
+  - gdb
+  - bind
+  - pciutils
+  - usbutils
+  - pacman-contrib
+  - networkmanager

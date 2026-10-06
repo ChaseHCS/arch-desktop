@@ -1,0 +1,34 @@
+---
+hyprland_packages:
+  - hyprland
+  - hyprlock
+  - hypridle
+  - hyprpolkitagent
+  - xdg-desktop-portal-hyprland
+  - xdg-desktop-portal-kde
+  - qt6-wayland
+  - waybar
+  - fuzzel
+  - mako
+  - libnotify
+  - grim
+  - slurp
+  - wl-clipboard
+  - cliphist
+  - playerctl
+  - pavucontrol
+  - network-manager-applet
+
+# Rendered with Jinja (src in templates/).
+hyprland_templates:
+  - { src: hyprland.lua.j2, dest: .config/hypr/hyprland.lua }
+  - { src: hypridle.conf.j2, dest: .config/hypr/hypridle.conf }
+  - { src: hyprlock.conf.j2, dest: .config/hypr/hyprlock.conf }
+  - { src: fuzzel.ini.j2, dest: .config/fuzzel/fuzzel.ini }
+  - { src: mako.j2, dest: .config/mako/config }
+
+# Copied verbatim (src in files/).
+hyprland_files:
+  - { src: waybar/config.jsonc, dest: .config/waybar/config.jsonc }
+  - { src: waybar/style.css, dest: .config/waybar/style.css }
+  - { src: hyprland-portals.conf, dest: .config/xdg-desktop-portal/hyprland-portals.conf }

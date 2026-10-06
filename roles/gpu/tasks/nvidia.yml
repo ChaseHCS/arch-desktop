@@ -1,0 +1,75 @@
+---
+- name: Find installed kernels
+  ansible.builtin.command:
+    argv: "{{ ['pacman', '-Qq'] + gpu_kernel_candidates }}"
+  register: gpu_kernels
+  changed_when: false
+  check_mode: false
+  failed_when: gpu_kernels.stdout_lines | length == 0
+
+- name: Install kernel headers and the NVIDIA driver
+  community.general.pacman:
+    name: "{{ gpu_kernels.stdout_lines | map('regex_replace', '$', '-headers') | list + gpu_nvidia_packages }}"
+    state: present
+  notify: Rebuild initramfs
+
+# Kernel mode setting is already the default in current nvidia-utils; it's
+# set here explicitly so it doesn't depend on packaging defaults. Preserving
+# video memory (with the suspend services below) avoids a corrupted desktop
+# after resume.
+- name: Configure NVIDIA kernel module options
+  ansible.builtin.copy:
+    dest: /etc/modprobe.d/nvidia.conf
+    content: |
+      # Managed by Ansible (arch-desktop)
+      options nvidia_drm modeset=1 fbdev=1
+      options nvidia NVreg_PreserveVideoMemoryAllocations=1 NVreg_TemporaryFilePath=/var/tmp
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Rebuild initramfs
+
+- name: Enable NVIDIA suspend/resume helpers
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+  loop:
+    - nvidia-suspend.service
+    - nvidia-resume.service
+    - nvidia-hibernate.service
+
+- name: Load NVIDIA modules from the initramfs (early KMS)
+  when:
+    - nvidia_early_kms
+    - mkinitcpio_bin.stat.exists
+  block:
+    - name: Ensure the mkinitcpio drop-in directory exists
+      ansible.builtin.file:
+        path: /etc/mkinitcpio.conf.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Add the NVIDIA modules to the initramfs
+      ansible.builtin.copy:
+        dest: /etc/mkinitcpio.conf.d/nvidia.conf
+        content: |
+          # Managed by Ansible (arch-desktop)
+          MODULES+=(nvidia nvidia_modeset nvidia_uvm nvidia_drm)
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Rebuild initramfs
+
+    # The kms hook would pull nouveau into the initramfs, where it can grab the
+    # card before the NVIDIA module loads.
+    - name: Remove the kms hook from mkinitcpio.conf
+      ansible.builtin.replace:
+        path: /etc/mkinitcpio.conf
+        regexp: '^(HOOKS=\(.*?)\s+kms(?=[\s)])(.*)$'
+        replace: '\1\2'
+      notify: Rebuild initramfs
+
+- name: Rebuild the initramfs now if anything changed
+  ansible.builtin.meta: flush_handlers

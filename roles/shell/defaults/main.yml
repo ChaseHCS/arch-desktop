@@ -1,0 +1,8 @@
+---
+shell_packages:
+  - zsh
+  - zsh-completions
+  - zsh-autosuggestions
+  - zsh-syntax-highlighting
+
+shell_omz_repo: https://github.com/ohmyzsh/ohmyzsh.git

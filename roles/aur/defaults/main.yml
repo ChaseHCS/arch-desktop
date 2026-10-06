@@ -1,0 +1,5 @@
+---
+# Prebuilt paru from the AUR. The PKGBUILD pins the release tarball checksum;
+# switch to "paru" to compile it from source instead (pulls in rust).
+aur_helper_package: paru-bin
+aur_helper_repo: "https://aur.archlinux.org/{{ aur_helper_package }}.git"

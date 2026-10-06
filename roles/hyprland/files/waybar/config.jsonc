@@ -1,0 +1,56 @@
+// Waybar config, written by the arch-desktop playbook.
+// Docs: https://github.com/Alexays/Waybar/wiki
+{
+  "layer": "top",
+  "position": "top",
+  "height": 30,
+  "spacing": 4,
+
+  "modules-left": ["hyprland/workspaces", "hyprland/window"],
+  "modules-center": ["clock"],
+  "modules-right": ["cpu", "memory", "pulseaudio", "network", "tray"],
+
+  "hyprland/workspaces": {
+    "format": "{name}",
+    "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
+    "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'"
+  },
+
+  "hyprland/window": {
+    "max-length": 60,
+    "separate-outputs": true
+  },
+
+  "clock": {
+    "format": "{:%a %d %b  %H:%M}",
+    "tooltip-format": "<tt>{calendar}</tt>"
+  },
+
+  "cpu": {
+    "format": "CPU {usage}%",
+    "interval": 5
+  },
+
+  "memory": {
+    "format": "MEM {percentage}%",
+    "interval": 5
+  },
+
+  "pulseaudio": {
+    "format": "VOL {volume}%",
+    "format-muted": "VOL muted",
+    "on-click": "pavucontrol"
+  },
+
+  "network": {
+    "format-ethernet": "ETH {ipaddr}",
+    "format-wifi": "WIFI {essid} {signalStrength}%",
+    "format-disconnected": "OFFLINE",
+    "tooltip-format": "{ifname} {ipaddr}/{cidr} via {gwaddr}",
+    "on-click": "nm-connection-editor"
+  },
+
+  "tray": {
+    "spacing": 8
+  }
+}

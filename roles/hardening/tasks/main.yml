@@ -1,0 +1,68 @@
+---
+- name: Apply hardening sysctls
+  ansible.builtin.template:
+    src: sysctl-hardening.conf.j2
+    dest: /etc/sysctl.d/90-hardening.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Apply sysctl settings
+
+- name: Block rarely used network protocol modules
+  ansible.builtin.template:
+    src: modprobe-blacklist.conf.j2
+    dest: /etc/modprobe.d/hardening-blacklist.conf
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Make sure sshd reads drop-in configs
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    line: Include /etc/ssh/sshd_config.d/*.conf
+    insertbefore: BOF
+
+- name: Ensure the sshd drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/ssh/sshd_config.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Harden sshd
+  ansible.builtin.template:
+    src: sshd-hardening.conf.j2
+    dest: /etc/ssh/sshd_config.d/10-hardening.conf
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Set sshd state
+  ansible.builtin.systemd_service:
+    name: sshd.service
+    enabled: "{{ sshd_enabled }}"
+    state: "{{ 'started' if sshd_enabled else 'stopped' }}"
+
+- name: Ensure the persistent faillock directory exists
+  ansible.builtin.file:
+    path: "{{ hardening_faillock.dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Configure account lockout (pam_faillock)
+  ansible.builtin.lineinfile:
+    path: /etc/security/faillock.conf
+    regexp: '^#?\s*{{ item.key }}\s*='
+    line: "{{ item.key }} = {{ item.value }}"
+  loop: "{{ hardening_faillock | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+
+- name: Restrict su to members of wheel
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/su
+    regexp: '^#?\s*auth\s+required\s+pam_wheel\.so\s+use_uid'
+    line: "auth            required        pam_wheel.so use_uid"

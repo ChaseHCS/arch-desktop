@@ -1,0 +1,19 @@
+# hypridle config, written by the arch-desktop playbook.
+# Docs: https://wiki.hypr.land/hypr-ecosystem/user/hypridle/
+
+general {
+    lock_cmd = pidof hyprlock || hyprlock
+    before_sleep_cmd = loginctl lock-session
+    after_sleep_cmd = hyprctl dispatch 'hl.dsp.dpms({ action = "enable" })'
+}
+
+listener {
+    timeout = {{ hypr_idle_lock_after }}
+    on-timeout = loginctl lock-session
+}
+
+listener {
+    timeout = {{ hypr_idle_dpms_after }}
+    on-timeout = hyprctl dispatch 'hl.dsp.dpms({ action = "disable" })'
+    on-resume = hyprctl dispatch 'hl.dsp.dpms({ action = "enable" })'
+}

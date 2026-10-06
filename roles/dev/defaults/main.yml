@@ -1,0 +1,18 @@
+---
+dev_python_packages:
+  - python
+  - python-pip
+  - python-pipx
+  - uv
+
+# System Node/npm is what Neovim's Mason uses when nvim isn't started from a
+# shell; fnm manages per-project Node versions on top of it.
+dev_nodejs_packages:
+  - nodejs
+  - npm
+  - fnm
+
+dev_docker_packages:
+  - docker
+  - docker-compose
+  - docker-buildx

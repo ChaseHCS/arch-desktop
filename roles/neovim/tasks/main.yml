@@ -1,0 +1,56 @@
+---
+- name: Install Neovim and LazyVim dependencies
+  community.general.pacman:
+    name: "{{ neovim_packages }}"
+    state: present
+
+- name: Check for an existing Neovim config
+  ansible.builtin.stat:
+    path: "{{ desktop_home }}/.config/nvim"
+  register: neovim_config_dir
+
+- name: Install the LazyVim starter
+  when: not neovim_config_dir.stat.exists
+  become: true
+  become_user: "{{ desktop_user }}"
+  block:
+    - name: Clone the LazyVim starter
+      ansible.builtin.git:
+        repo: "{{ neovim_starter_repo }}"
+        dest: "{{ desktop_home }}/.config/nvim"
+        version: main
+        depth: 1
+
+    # The starter is meant to become your own config, not track upstream.
+    - name: Detach the config from the starter repo
+      ansible.builtin.file:
+        path: "{{ desktop_home }}/.config/nvim/.git"
+        state: absent
+
+    - name: Enable LazyVim extras
+      ansible.builtin.template:
+        src: lazyvim.json.j2
+        dest: "{{ desktop_home }}/.config/nvim/lazyvim.json"
+        mode: "0644"
+        force: false
+
+- name: Install LazyVim plugins
+  ansible.builtin.command:
+    argv: [nvim, --headless, "+Lazy! sync", +qa]
+  become: true
+  become_user: "{{ desktop_user }}"
+  register: neovim_lazy_sync
+  changed_when: true
+  failed_when: false
+  when:
+    - neovim_bootstrap_plugins
+    - not neovim_config_dir.stat.exists
+
+- name: Report plugin install problems
+  ansible.builtin.debug:
+    msg: >-
+      LazyVim's headless plugin install failed (rc={{ neovim_lazy_sync.rc }}).
+      It retries automatically when you first open nvim.
+  when:
+    - neovim_lazy_sync is not skipped
+    - neovim_lazy_sync.rc | default(0) != 0

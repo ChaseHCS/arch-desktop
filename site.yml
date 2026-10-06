@@ -1,0 +1,71 @@
+---
+- name: Configure an Arch Linux coding desktop
+  hosts: localhost
+  become: true
+
+  pre_tasks:
+    - name: Ensure this is Arch Linux
+      ansible.builtin.assert:
+        that: ansible_facts['distribution'] == 'Archlinux'
+        fail_msg: This playbook only supports Arch Linux.
+        quiet: true
+      tags: [always]
+
+    - name: Ensure the desktop user is a regular account
+      ansible.builtin.assert:
+        that:
+          - desktop_user | length > 0
+          - desktop_user != 'root'
+        fail_msg: >-
+          Run the playbook as your normal user (it asks for the sudo password),
+          or pass -e desktop_user=<name>.
+        quiet: true
+      tags: [always]
+
+    - name: Look up the desktop user's account
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ desktop_user }}"
+      tags: [always]
+
+    - name: Record the desktop user's home directory
+      ansible.builtin.set_fact:
+        desktop_home: "{{ ansible_facts['getent_passwd'][desktop_user][4] }}"
+      tags: [always]
+
+    - name: Check whether the initramfs is built by mkinitcpio
+      ansible.builtin.stat:
+        path: /usr/bin/mkinitcpio
+      register: mkinitcpio_bin
+      tags: [always]
+
+  roles:
+    - { role: base, tags: [base] }
+    - { role: aur, tags: [aur] }
+    - { role: gpu, tags: [gpu] }
+    - { role: desktop, tags: [desktop] }
+    - { role: hyprland, tags: [hyprland] }
+    - { role: shell, tags: [shell] }
+    - { role: terminal, tags: [terminal] }
+    - { role: neovim, tags: [neovim] }
+    - { role: dev, tags: [dev] }
+    - { role: hardening, tags: [hardening], when: enable_hardening }
+
+  handlers:
+    - name: Rebuild initramfs
+      ansible.builtin.command: mkinitcpio -P
+      when: mkinitcpio_bin.stat.exists
+      changed_when: true
+
+    - name: Apply sysctl settings
+      ansible.builtin.systemd_service:
+        name: systemd-sysctl.service
+        state: restarted
+
+  post_tasks:
+    - name: Done
+      ansible.builtin.debug:
+        msg: >-
+          Finished. Reboot to load the new kernel modules and start the login manager,
+          then pick "Hyprland" or "Plasma (Wayland)" from its session menu.
+      tags: [always]

@@ -1,0 +1,73 @@
+---
+- name: Install the PipeWire audio stack
+  community.general.pacman:
+    name: "{{ desktop_audio_packages }}"
+    state: present
+
+- name: Install fonts
+  community.general.pacman:
+    name: "{{ desktop_font_packages }}"
+    state: present
+
+- name: Install KDE Plasma and browsers
+  community.general.pacman:
+    name: "{{ desktop_plasma_packages + browsers }}"
+    state: present
+
+- name: Install Bluetooth support
+  community.general.pacman:
+    name: "{{ desktop_bluetooth_packages }}"
+    state: present
+  when: enable_bluetooth
+
+- name: Enable Bluetooth
+  ansible.builtin.systemd_service:
+    name: bluetooth.service
+    enabled: true
+    state: started
+  when: enable_bluetooth
+
+- name: Check the display manager setting
+  ansible.builtin.assert:
+    that: display_manager in ['plasmalogin', 'sddm']
+    fail_msg: "display_manager must be plasmalogin or sddm (got {{ display_manager }})"
+    quiet: true
+
+- name: Set up SDDM
+  when: display_manager == 'sddm'
+  block:
+    - name: Install SDDM
+      community.general.pacman:
+        name: sddm
+        state: present
+
+    - name: Ensure the SDDM config directory exists
+      ansible.builtin.file:
+        path: /etc/sddm.conf.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Use the Breeze theme for SDDM
+      ansible.builtin.copy:
+        src: sddm-theme.conf
+        dest: /etc/sddm.conf.d/10-theme.conf
+        owner: root
+        group: root
+        mode: "0644"
+
+# Enabled only; starting it mid-run would switch the VT to the login screen.
+# force replaces whichever display manager currently owns display-manager.service.
+- name: Enable the display manager at boot
+  ansible.builtin.systemd_service:
+    name: "{{ display_manager }}.service"
+    enabled: true
+    force: true
+
+- name: Create XDG user directories (Documents, Downloads, ...)
+  ansible.builtin.command:
+    cmd: xdg-user-dirs-update
+    creates: "{{ desktop_home }}/.config/user-dirs.dirs"
+  become: true
+  become_user: "{{ desktop_user }}"

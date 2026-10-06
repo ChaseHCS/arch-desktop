@@ -1,0 +1,40 @@
+---
+- name: Install Hyprland and its companions
+  community.general.pacman:
+    name: "{{ hyprland_packages }}"
+    state: present
+
+- name: Create config directories
+  ansible.builtin.file:
+    path: "{{ desktop_home }}/{{ item }}"
+    state: directory
+    mode: "0755"
+  loop: "{{ (hyprland_templates + hyprland_files) | map(attribute='dest') | map('dirname') | unique }}"
+  become: true
+  become_user: "{{ desktop_user }}"
+
+- name: Write Hyprland configs
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ desktop_home }}/{{ item.dest }}"
+    mode: "0644"
+    force: "{{ dotfiles_overwrite }}"
+    backup: true
+  loop: "{{ hyprland_templates }}"
+  loop_control:
+    label: "{{ item.dest }}"
+  become: true
+  become_user: "{{ desktop_user }}"
+
+- name: Write Waybar and portal configs
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ desktop_home }}/{{ item.dest }}"
+    mode: "0644"
+    force: "{{ dotfiles_overwrite }}"
+    backup: true
+  loop: "{{ hyprland_files }}"
+  loop_control:
+    label: "{{ item.dest }}"
+  become: true
+  become_user: "{{ desktop_user }}"

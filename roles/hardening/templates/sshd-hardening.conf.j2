@@ -1,0 +1,10 @@
+# Managed by Ansible (arch-desktop). Local edits will be overwritten.
+# sshd is disabled by default; these settings apply if you ever enable it.
+PermitRootLogin no
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitEmptyPasswords no
+AllowUsers {{ desktop_user }}
+X11Forwarding no
+MaxAuthTries 3
+LoginGraceTime 30

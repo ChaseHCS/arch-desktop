@@ -1,0 +1,51 @@
+---
+hardening_sysctl:
+  # Kernel info leaks
+  kernel.kptr_restrict: 2
+  kernel.dmesg_restrict: 1
+  # Attack surface
+  kernel.kexec_load_disabled: 1
+  kernel.unprivileged_bpf_disabled: 1
+  net.core.bpf_jit_harden: 2
+  dev.tty.ldisc_autoload: 0
+  vm.unprivileged_userfaultfd: 0
+  # Only allow ptrace on your own child processes. `gdb ./prog` still works;
+  # attaching to a running process (`gdb -p`) needs sudo.
+  kernel.yama.ptrace_scope: 1
+  # Filesystem
+  fs.protected_fifos: 2
+  fs.protected_regular: 2
+  fs.suid_dumpable: 0
+  # Network: no redirects or source routing, strict reverse-path filtering.
+  # If a VPN with policy routing misbehaves, set rp_filter to 2 (loose).
+  net.ipv4.conf.all.rp_filter: 1
+  net.ipv4.conf.default.rp_filter: 1
+  net.ipv4.conf.all.accept_redirects: 0
+  net.ipv4.conf.default.accept_redirects: 0
+  net.ipv4.conf.all.secure_redirects: 0
+  net.ipv4.conf.default.secure_redirects: 0
+  net.ipv4.conf.all.send_redirects: 0
+  net.ipv4.conf.default.send_redirects: 0
+  net.ipv6.conf.all.accept_redirects: 0
+  net.ipv6.conf.default.accept_redirects: 0
+  net.ipv4.conf.all.accept_source_route: 0
+  net.ipv4.conf.default.accept_source_route: 0
+  net.ipv6.conf.all.accept_source_route: 0
+  net.ipv6.conf.default.accept_source_route: 0
+  net.ipv4.tcp_syncookies: 1
+  net.ipv4.tcp_rfc1337: 1
+
+# Rarely used network protocols with a history of kernel CVEs.
+hardening_blacklisted_modules:
+  - dccp
+  - rds
+  - tipc
+
+# pam_faillock: lock an account for unlock_time seconds after `deny` failures
+# within fail_interval seconds. Applies to the login screen, sudo and hyprlock.
+# Stored under /var/lib so lockouts survive a reboot.
+hardening_faillock:
+  deny: 5
+  fail_interval: 900
+  unlock_time: 600
+  dir: /var/lib/faillock

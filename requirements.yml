@@ -1,0 +1,5 @@
+---
+# Only needed when running with plain ansible-core. The Arch "ansible"
+# package (installed by bootstrap.sh) already bundles this collection.
+collections:
+  - name: community.general
