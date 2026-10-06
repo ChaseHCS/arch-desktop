@@ -100,6 +100,16 @@ enable_docker: true
 # `sudo docker` (or set up rootless Docker yourself).
 docker_user_in_group: true
 
+# --- Peripherals ------------------------------------------------------------
+# Logitech G mice (G HUB replacement): Piper for DPI, buttons, lighting and
+# profiles (saved on the mouse), Solaar for receiver pairing and battery.
+enable_logitech: true
+# Keep Solaar running in the tray for battery status. Off by default: Solaar
+# re-applies the settings it remembers whenever the mouse reconnects, which can
+# undo changes made in Piper. If you turn this on, mark DPI, report rate and
+# onboard profiles as ignored in Solaar (the icon next to each setting).
+logitech_solaar_tray: false
+
 # --- Music ------------------------------------------------------------------
 # Spotify's official client (spotify-launcher) and spotify-player (terminal).
 enable_spotify: true

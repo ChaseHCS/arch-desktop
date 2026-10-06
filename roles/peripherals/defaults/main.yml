@@ -1,0 +1,10 @@
+---
+# Replacements for Logitech G HUB:
+# - piper + libratbag: DPI, buttons/macros, lighting and profiles, written to
+#   the mouse's onboard memory (ratbagd is started on demand over D-Bus)
+# - solaar: pairing with Lightspeed/Unifying/Bolt receivers and battery level;
+#   ships udev rules that give the logged-in user access to the receiver
+peripherals_logitech_packages:
+  - libratbag
+  - piper
+  - solaar

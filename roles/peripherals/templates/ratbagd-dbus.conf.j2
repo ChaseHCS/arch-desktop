@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-BUS Bus Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
+<!--
+  Managed by Ansible (arch-desktop). Local edits will be overwritten.
+
+  libratbag's own policy lets every local account call ratbagd, which can
+  write button macros into the mouse's onboard memory. This limits it to the
+  desktop user; root keeps access through the package policy.
+-->
+<busconfig>
+  <policy context="default">
+    <deny send_destination="org.freedesktop.ratbag1"/>
+  </policy>
+  <policy user="{{ desktop_user }}">
+    <allow send_destination="org.freedesktop.ratbag1"/>
+  </policy>
+</busconfig>

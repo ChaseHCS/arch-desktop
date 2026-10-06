@@ -1,0 +1,6 @@
+---
+# Reload (not restart): picks up policy changes without dropping the session.
+- name: Reload D-Bus policy
+  ansible.builtin.systemd_service:
+    name: dbus.service
+    state: reloaded

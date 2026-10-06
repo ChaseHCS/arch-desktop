@@ -8,6 +8,7 @@ Ansible playbook that turns a fresh Arch Linux install into a coding desktop:
 - **Shell:** zsh + Oh My Zsh (`robbyrussell`), autosuggestions, syntax highlighting
 - **Terminal:** Terminator (with a `tmux` profile) and tmux, Tokyo Night colours throughout
 - **Editor:** Neovim with LazyVim (Python, TypeScript, Docker, Ansible, YAML, JSON, TOML, Markdown extras)
+- **Peripherals:** Logitech G mice without G HUB: Piper for DPI, buttons, lighting and onboard profiles; Solaar for receivers and battery
 - **Music:** Spotify's official client (via `spotify-launcher`, native Wayland) and `spotify-player` in the terminal; both work with the media keys
 - **Toolchains:** Python (uv, pipx), Node.js (system + fnm with the current LTS), Docker (compose, buildx)
 - **GPU:** NVIDIA open kernel modules with early KMS and suspend/resume support (AMD/Intel also supported)
@@ -61,6 +62,8 @@ Set your options in [`group_vars/all.yml`](group_vars/all.yml), or override them
 | `lazyvim_extras` | | Only applied on the first install (`lazyvim.json`). Change later with `:LazyExtras` |
 | `enable_python` / `enable_nodejs` / `enable_docker` | `true` | |
 | `docker_user_in_group` | `true` | See security notes |
+| `enable_logitech` | `true` | Piper, libratbag and Solaar for Logitech G mice; see [Logitech mouse](#logitech-mouse) |
+| `logitech_solaar_tray` | `false` | Keep Solaar in the tray for battery status (read the caveat first) |
 | `enable_spotify` | `true` | Official Spotify client and spotify-player |
 | `spotify_client_id` | `""` | Your own Spotify app's client ID for spotify-player; see [Spotify](#spotify) |
 | `enable_hardening`, `sshd_enabled` | `true`, `false` | Sysctl and faillock values are in `roles/hardening/defaults/main.yml` |
@@ -89,6 +92,14 @@ The config is in `~/.config/hypr/hyprland.lua`. Idle behaviour (lock after 10 mi
 
 Without Plasma there's no System Settings app. Qt/KDE apps take their theme from `~/.config/kdeglobals` and GTK apps from GSettings (change with `gsettings set org.gnome.desktop.interface ...`). Monitors are set in `hyprland.lua` (`hyprctl monitors all` lists them), Wi-Fi through the nm-applet tray icon, and audio through `pavucontrol`.
 
+## Logitech mouse
+
+G HUB doesn't exist for Linux. These cover what it does for G-series mice:
+
+- **Piper** (in fuzzel): DPI stages, button mapping and macros, lighting, report rate and profiles. It writes them to the mouse's onboard memory, so they stick without anything running, even on other computers. Run `ratbagctl list` to check your mouse is detected. libratbag supports most G mice; if yours isn't listed, its model is needed for a workaround.
+- **Solaar:** pair the mouse with a Lightspeed/Unifying/Bolt receiver and check the battery. Basic movement and clicks work without either tool.
+- **Use Piper for settings and Solaar only for pairing and battery.** Solaar re-applies the settings it remembers whenever the device reconnects, so leaving it running can undo Piper changes. That's why it isn't autostarted. If you want its battery icon in the tray, set `logitech_solaar_tray: true` and mark DPI, report rate and onboard profiles as ignored in Solaar first.
+
 ## Spotify
 
 Both clients need Premium (you have it) and show up as Spotify Connect devices, so you can hand playback between them, your phone and speakers. Media keys and `playerctl` control whichever one is playing.
@@ -102,6 +113,7 @@ Both clients need Premium (you have it) and show up as Spotify Connect devices, 
 Trade-offs worth knowing about:
 
 - **Login screen theme:** theme QML runs inside the greeter that receives your password, so keep network and process calls out of it.
+- **Mouse configuration:** ratbagd, the daemon behind Piper, can write macros into the mouse's onboard memory, and libratbag's default D-Bus policy lets every local account call it. A policy override in `/etc/dbus-1/system.d/ratbagd-restrict.conf` limits it to your user (and root).
 - **Spotify:** the official client is closed-source and runs as your user. spotify-launcher checks Spotify's download against the signing key shipped in the Arch package. spotify-player streams through librespot, an unofficial reimplementation of Spotify's protocol, which technically goes against Spotify's terms and can break when Spotify changes things. Its login tokens in `~/.cache/spotify-player/` give access to your account, so treat them like a password.
 - **Docker group:** being in `docker` is root-equivalent. Set `docker_user_in_group: false` if you'd rather use `sudo docker` or rootless Docker.
 - **AUR:** paru is bootstrapped from the `paru-bin` PKGBUILD, a prebuilt release binary pinned by checksum. AUR packages are user-submitted, so read PKGBUILDs before adding anything to `aur_packages`.
@@ -129,6 +141,7 @@ roles/
   terminal/   Terminator and tmux
   neovim/     Neovim and LazyVim
   dev/        Python, Node.js (fnm), Docker
+  peripherals/ Logitech mouse tools (Piper, libratbag, Solaar)
   music/      Spotify official client and spotify-player
   hardening/  sysctl, module blacklist, sshd, faillock, su
 ```

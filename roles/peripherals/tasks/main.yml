@@ -1,0 +1,25 @@
+---
+- name: Install Logitech mouse tools (Piper, libratbag, Solaar)
+  community.general.pacman:
+    name: "{{ peripherals_logitech_packages }}"
+    state: present
+  when: enable_logitech | bool
+
+- name: Ensure the D-Bus policy override directory exists
+  ansible.builtin.file:
+    path: /etc/dbus-1/system.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: enable_logitech | bool
+
+- name: Limit ratbagd to the desktop user
+  ansible.builtin.template:
+    src: ratbagd-dbus.conf.j2
+    dest: /etc/dbus-1/system.d/ratbagd-restrict.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when: enable_logitech | bool
+  notify: Reload D-Bus policy
