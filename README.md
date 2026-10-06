@@ -2,8 +2,9 @@
 
 Ansible playbook that turns a fresh Arch Linux install into a coding desktop:
 
-- **Desktops:** KDE Plasma (Wayland) and Hyprland side by side, chosen at the login screen (Plasma Login Manager, or SDDM if you prefer)
-- **Hyprland:** Lua config (Hyprland ≥ 0.55), waybar, fuzzel, mako, hyprlock, hypridle, hyprpolkitagent, cliphist, grim/slurp; KDE portal for file dialogs
+- **Desktop:** Hyprland only (no Plasma), with a Lua config (Hyprland ≥ 0.55), waybar, fuzzel, mako, hyprlock, hypridle, hyprpolkitagent, cliphist, grim/slurp
+- **Login screen:** SDDM with [sddm-astronaut-theme](https://github.com/Keyitdev/sddm-astronaut-theme) (10 presets, some animated; pinned to a reviewed commit)
+- **Apps and theming:** Dolphin, Okular, Ark, Gwenview; Breeze Dark across Qt, KDE and GTK apps; KDE file dialogs; GNOME Keyring unlocked at login
 - **Shell:** zsh + Oh My Zsh (`robbyrussell`), autosuggestions, syntax highlighting
 - **Terminal:** Terminator (with a `tmux` profile) and tmux, Tokyo Night colours throughout
 - **Editor:** Neovim with LazyVim (Python, TypeScript, Docker, Ansible, YAML, JSON, TOML, Markdown extras)
@@ -32,7 +33,7 @@ cd arch-desktop
 sudo reboot
 ```
 
-At the login screen, choose **Hyprland** or **Plasma (Wayland)** from the session menu.
+Log in at the SDDM screen and you're in Hyprland.
 
 Re-running is safe; tasks are idempotent. Run part of the playbook with tags:
 
@@ -51,7 +52,7 @@ Set your options in [`group_vars/all.yml`](group_vars/all.yml), or override them
 | `gpu_vendor` | `nvidia` | `nvidia`, `amd`, `intel`, `none` |
 | `dotfiles_overwrite` | `false` | Dotfiles are only written when missing. Set to `true` to re-render them (a backup is kept). |
 | `extra_packages` / `aur_packages` | `[]` | Extra packages from the official repos / the AUR (installed via paru) |
-| `display_manager` | `plasmalogin` | KDE's Plasma Login Manager (the Plasma default since 6.6), or `sddm` |
+| `sddm_theme_preset` | `hyprland_kath` | Login screen preset; the list is in the file |
 | `browsers` | firefox, chromium | |
 | `hypr_monitors` | auto | One entry per monitor; see the comment in the file |
 | `hypr_kb_layout` | `us` | |
@@ -83,10 +84,13 @@ Set your options in [`group_vars/all.yml`](group_vars/all.yml), or override them
 
 The config is in `~/.config/hypr/hyprland.lua`. Idle behaviour (lock after 10 min, screens off after 15) is in `hypridle.conf`.
 
+Without Plasma there's no System Settings app. Qt/KDE apps take their theme from `~/.config/kdeglobals` and GTK apps from GSettings (change with `gsettings set org.gnome.desktop.interface ...`). Monitors are set in `hyprland.lua` (`hyprctl monitors all` lists them), Wi-Fi through the nm-applet tray icon, and audio through `pavucontrol`.
+
 ## Security notes
 
 Trade-offs worth knowing about:
 
+- **Login screen theme:** QML runs inside the greeter that handles your password. The theme is pinned to commit `abb3163`, which was audited for network, process and file-write calls (there are none, and the password only goes to `sddm.login()`). Review the diff before bumping `sddm_theme_version`.
 - **Docker group:** being in `docker` is root-equivalent. Set `docker_user_in_group: false` if you'd rather use `sudo docker` or rootless Docker.
 - **AUR:** paru is bootstrapped from the `paru-bin` PKGBUILD, a prebuilt release binary pinned by checksum. AUR packages are user-submitted, so read PKGBUILDs before adding anything to `aur_packages`.
 - **Temporary sudoers rule:** while installing `aur_packages`, a `NOPASSWD: /usr/bin/pacman` rule for your user is written to `/etc/sudoers.d/99-ansible-aur`. It's removed in an `always:` block even if the install fails, and it's never written when `aur_packages` is empty.
@@ -105,7 +109,8 @@ roles/
   base/       pacman tuning, full upgrade, base packages, microcode, services
   aur/        paru bootstrap and AUR packages
   gpu/        NVIDIA driver and early KMS, or Mesa for AMD/Intel
-  desktop/    PipeWire, fonts, Plasma, login manager, browsers
+  desktop/    PipeWire, fonts, KDE apps, Breeze Dark theming, keyring, browsers
+  sddm/       SDDM, login screen theme, keyring unlock at login
   hyprland/   Hyprland and companion configs
   shell/      zsh and Oh My Zsh
   terminal/   Terminator and tmux

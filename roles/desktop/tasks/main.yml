@@ -9,65 +9,115 @@
     name: "{{ desktop_font_packages }}"
     state: present
 
-- name: Install KDE Plasma and browsers
+- name: Install apps, theming and the keyring
   community.general.pacman:
-    name: "{{ desktop_plasma_packages + browsers }}"
+    name: "{{ desktop_app_packages + desktop_theme_packages + desktop_keyring_packages + browsers }}"
     state: present
 
 - name: Install Bluetooth support
   community.general.pacman:
     name: "{{ desktop_bluetooth_packages }}"
     state: present
-  when: enable_bluetooth
+  when: enable_bluetooth | bool
 
 - name: Enable Bluetooth
   ansible.builtin.systemd_service:
     name: bluetooth.service
     enabled: true
     state: started
-  when: enable_bluetooth
+  when: enable_bluetooth | bool
 
-- name: Check the display manager setting
-  ansible.builtin.assert:
-    that: display_manager in ['plasmalogin', 'sddm']
-    fail_msg: "display_manager must be plasmalogin or sddm (got {{ display_manager }})"
-    quiet: true
+# --- GTK: system-wide GSettings defaults (users can still override them) ----
+- name: Ensure dconf directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - /etc/dconf/profile
+    - /etc/dconf/db/local.d
 
-- name: Set up SDDM
-  when: display_manager == 'sddm'
-  block:
-    - name: Install SDDM
-      community.general.pacman:
-        name: sddm
-        state: present
+- name: Use the local dconf database for user defaults
+  ansible.builtin.copy:
+    src: dconf-profile-user
+    dest: /etc/dconf/profile/user
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Update dconf database
 
-    - name: Ensure the SDDM config directory exists
-      ansible.builtin.file:
-        path: /etc/sddm.conf.d
-        state: directory
-        owner: root
-        group: root
-        mode: "0755"
+- name: Default GTK apps to Breeze Dark
+  ansible.builtin.template:
+    src: dconf-defaults.j2
+    dest: /etc/dconf/db/local.d/10-arch-desktop
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Update dconf database
 
-    - name: Use the Breeze theme for SDDM
-      ansible.builtin.copy:
-        src: sddm-theme.conf
-        dest: /etc/sddm.conf.d/10-theme.conf
-        owner: root
-        group: root
-        mode: "0644"
-
-# Enabled only; starting it mid-run would switch the VT to the login screen.
-# force replaces whichever display manager currently owns display-manager.service.
-- name: Enable the display manager at boot
-  ansible.builtin.systemd_service:
-    name: "{{ display_manager }}.service"
-    enabled: true
-    force: true
-
+# --- Per-user config ----------------------------------------------------------
 - name: Create XDG user directories (Documents, Downloads, ...)
   ansible.builtin.command:
     cmd: xdg-user-dirs-update
     creates: "{{ desktop_home }}/.config/user-dirs.dirs"
   become: true
   become_user: "{{ desktop_user }}"
+
+- name: Create config directories
+  ansible.builtin.file:
+    path: "{{ desktop_home }}/.config/gtk-3.0"
+    state: directory
+    mode: "0755"
+  become: true
+  become_user: "{{ desktop_user }}"
+
+# GTK3 apps under XWayland read this instead of GSettings.
+- name: Write the GTK 3 settings
+  ansible.builtin.template:
+    src: gtk3-settings.ini.j2
+    dest: "{{ desktop_home }}/.config/gtk-3.0/settings.ini"
+    mode: "0644"
+    force: "{{ dotfiles_overwrite }}"
+    backup: true
+  become: true
+  become_user: "{{ desktop_user }}"
+
+# Plasma's System Settings normally writes kdeglobals. Start from the full
+# Breeze Dark scheme so KDE apps get the colours, not just Qt's palette.
+- name: Write kdeglobals from the Breeze Dark colour scheme
+  ansible.builtin.copy:
+    src: /usr/share/color-schemes/BreezeDark.colors
+    dest: "{{ desktop_home }}/.config/kdeglobals"
+    remote_src: true
+    mode: "0644"
+    force: "{{ dotfiles_overwrite }}"
+    backup: true
+  become: true
+  become_user: "{{ desktop_user }}"
+  notify: Set icons and terminal for KDE apps
+
+# Without Plasma's menu file, Dolphin's "Open With" list is empty.
+# XDG_MENU_PREFIX=arch- is also set in the Hyprland session.
+- name: Build the KDE application cache
+  ansible.builtin.command:
+    cmd: kbuildsycoca6 --noincremental
+    creates: "{{ desktop_home }}/.cache/ksycoca6_*"
+  environment:
+    XDG_MENU_PREFIX: arch-
+  become: true
+  become_user: "{{ desktop_user }}"
+
+# Chromium only uses the keyring automatically on GNOME/KDE; elsewhere it
+# falls back to a weakly protected local store.
+- name: Make Chromium use the keyring and native Wayland
+  ansible.builtin.copy:
+    src: chromium-flags.conf
+    dest: "{{ desktop_home }}/.config/chromium-flags.conf"
+    mode: "0644"
+    force: "{{ dotfiles_overwrite }}"
+    backup: true
+  become: true
+  become_user: "{{ desktop_user }}"
+  when: "'chromium' in browsers"

@@ -1,0 +1,81 @@
+---
+- name: Install SDDM and the theme's Qt modules
+  community.general.pacman:
+    name: "{{ sddm_packages }}"
+    state: present
+
+- name: Install the login screen theme
+  ansible.builtin.git:
+    repo: "{{ sddm_theme_repo }}"
+    dest: "{{ sddm_theme_dir }}"
+    version: "{{ sddm_theme_version }}"
+
+# Themes/astronaut.conf is the theme's ConfigFile; SDDM applies
+# <ConfigFile>.user on top of it, and every preset sets the same keys. This
+# picks a preset without editing the checkout.
+- name: Select the theme preset
+  ansible.builtin.copy:
+    src: "{{ sddm_theme_dir }}/Themes/{{ sddm_theme_preset }}.conf"
+    dest: "{{ sddm_theme_dir }}/Themes/astronaut.conf.user"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Install the theme's fonts
+  ansible.builtin.copy:
+    src: "{{ sddm_theme_dir }}/Fonts/"
+    dest: "/usr/share/fonts/{{ sddm_theme_name }}/"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0644"
+    directory_mode: "0755"
+  notify: Refresh font cache
+
+- name: Ensure the SDDM config directory exists
+  ansible.builtin.file:
+    path: /etc/sddm.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Configure SDDM
+  ansible.builtin.template:
+    src: sddm.conf.j2
+    dest: /etc/sddm.conf.d/10-arch-desktop.conf
+    owner: root
+    group: root
+    mode: "0644"
+
+# Arch's /etc/pam.d/sddm normally already has these lines. They're only added
+# if missing, so pacman doesn't start leaving .pacnew files around.
+- name: Check that SDDM unlocks the keyring at login
+  ansible.builtin.command:
+    argv: [grep, -q, pam_gnome_keyring.so, /etc/pam.d/sddm]
+  register: sddm_pam_keyring
+  changed_when: false
+  failed_when: sddm_pam_keyring.rc > 1
+  check_mode: false
+
+- name: Unlock the GNOME keyring with the login password
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/sddm
+    line: "{{ item.line }}"
+    insertafter: "{{ item.after }}"
+  loop:
+    - { after: '^auth\s+include\s+system-login', line: "-auth       optional    pam_gnome_keyring.so" }
+    - { after: '^password\s+include\s+system-login', line: "-password   optional    pam_gnome_keyring.so use_authtok" }
+    - { after: '^session\s+include\s+system-login', line: "-session    optional    pam_gnome_keyring.so auto_start" }
+  loop_control:
+    label: "{{ item.line }}"
+  when: sddm_pam_keyring.rc == 1
+
+# Enabled only; starting it mid-run would switch the VT to the login screen.
+# force replaces whichever display manager currently owns display-manager.service.
+- name: Enable SDDM at boot
+  ansible.builtin.systemd_service:
+    name: sddm.service
+    enabled: true
+    force: true

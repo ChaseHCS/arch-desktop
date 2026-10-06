@@ -1,0 +1,22 @@
+---
+- name: Update dconf database
+  ansible.builtin.command: dconf update
+  changed_when: true
+
+# Only after kdeglobals is (re)written, so later changes of yours stick.
+- name: Set icons and terminal for KDE apps
+  community.general.ini_file:
+    path: "{{ desktop_home }}/.config/kdeglobals"
+    section: "{{ item.section }}"
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
+    no_extra_spaces: true
+    mode: "0644"
+  loop:
+    - { section: Icons, option: Theme, value: breeze-dark }
+    - { section: General, option: TerminalApplication, value: "{{ hypr_terminal }}" }
+    - { section: General, option: TerminalService, value: "{{ hypr_terminal }}.desktop" }
+  loop_control:
+    label: "[{{ item.section }}] {{ item.option }}={{ item.value }}"
+  become: true
+  become_user: "{{ desktop_user }}"

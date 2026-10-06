@@ -40,7 +40,7 @@
 
 - name: Load NVIDIA modules from the initramfs (early KMS)
   when:
-    - nvidia_early_kms
+    - nvidia_early_kms | bool
     - mkinitcpio_bin.stat.exists
   block:
     - name: Ensure the mkinitcpio drop-in directory exists

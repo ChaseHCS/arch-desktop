@@ -41,8 +41,8 @@
 - name: Set sshd state
   ansible.builtin.systemd_service:
     name: sshd.service
-    enabled: "{{ sshd_enabled }}"
-    state: "{{ 'started' if sshd_enabled else 'stopped' }}"
+    enabled: "{{ sshd_enabled | bool }}"
+    state: "{{ 'started' if sshd_enabled | bool else 'stopped' }}"
 
 - name: Ensure the persistent faillock directory exists
   ansible.builtin.file:

@@ -1,6 +1,6 @@
 ---
 # Installed first so these win pacman's provider prompts (jack, ttf-font)
-# when Plasma's dependencies are resolved.
+# when later packages pull in those dependencies.
 desktop_audio_packages:
   - pipewire
   - pipewire-alsa
@@ -14,17 +14,36 @@ desktop_font_packages:
   - noto-fonts-cjk
   - ttf-jetbrains-mono-nerd
 
-desktop_plasma_packages:
-  - plasma-meta
-  - plasma-login-manager
+# KDE apps without the Plasma desktop. kio-extras and ffmpegthumbs give Dolphin
+# thumbnails and sftp/smb support; archlinux-xdg-menu fills its "Open With" list.
+desktop_app_packages:
   - dolphin
+  - kio-extras
+  - ffmpegthumbs
   - ark
-  - spectacle
   - okular
   - gwenview
+  - archlinux-xdg-menu
   - xdg-user-dirs
   - xdg-utils
+
+# Breeze Dark for both toolkits. plasma-integration is KDE's Qt theme plugin
+# (QT_QPA_PLATFORMTHEME=kde), which reads ~/.config/kdeglobals; GTK reads
+# GSettings (dconf) on Wayland.
+desktop_theme_packages:
+  - breeze
+  - breeze-gtk
+  - breeze-icons
+  - plasma-integration
+  - dconf
+  - gsettings-desktop-schemas
+
+# Secret Service for browsers, git and other apps, unlocked at login by SDDM.
+desktop_keyring_packages:
+  - gnome-keyring
+  - libsecret
 
 desktop_bluetooth_packages:
   - bluez
   - bluez-utils
+  - blueman

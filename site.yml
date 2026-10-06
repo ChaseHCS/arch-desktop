@@ -44,12 +44,13 @@
     - { role: aur, tags: [aur] }
     - { role: gpu, tags: [gpu] }
     - { role: desktop, tags: [desktop] }
+    - { role: sddm, tags: [sddm] }
     - { role: hyprland, tags: [hyprland] }
     - { role: shell, tags: [shell] }
     - { role: terminal, tags: [terminal] }
     - { role: neovim, tags: [neovim] }
     - { role: dev, tags: [dev] }
-    - { role: hardening, tags: [hardening], when: enable_hardening }
+    - { role: hardening, tags: [hardening], when: enable_hardening | bool }
 
   handlers:
     - name: Rebuild initramfs
@@ -66,6 +67,6 @@
     - name: Done
       ansible.builtin.debug:
         msg: >-
-          Finished. Reboot to load the new kernel modules and start the login manager,
-          then pick "Hyprland" or "Plasma (Wayland)" from its session menu.
+          Finished. Reboot to load the new kernel modules and start SDDM, then log in
+          to Hyprland.
       tags: [always]

@@ -31,13 +31,14 @@ local browser     = "{{ hypr_browser }}"
 ---- AUTOSTART ----
 -------------------
 
--- Started from here rather than as systemd user services so none of this
--- runs when you log into Plasma instead.
 hl.on("hyprland.start", function()
     hl.exec_cmd("waybar")
     hl.exec_cmd("mako")
     hl.exec_cmd("hypridle")
     hl.exec_cmd("nm-applet --indicator")
+{% if enable_bluetooth | bool %}
+    hl.exec_cmd("blueman-applet")
+{% endif %}
     hl.exec_cmd("systemctl --user start hyprpolkitagent")
     hl.exec_cmd("wl-paste --type text --watch cliphist store")
     hl.exec_cmd("wl-paste --type image --watch cliphist store")
@@ -48,11 +49,15 @@ end)
 ---- ENVIRONMENT VARIABLES ----
 -------------------------------
 
+hl.env("XCURSOR_THEME", "breeze_cursors")
 hl.env("XCURSOR_SIZE", "24")
 hl.env("HYPRCURSOR_SIZE", "24")
 hl.env("QT_QPA_PLATFORM", "wayland;xcb")
--- Qt apps pick up the Plasma theme and colours (System Settings) here too.
+-- KDE's Qt theme plugin: Qt/KDE apps take colours, icons and style from
+-- ~/.config/kdeglobals (Breeze Dark).
 hl.env("QT_QPA_PLATFORMTHEME", "kde")
+-- Lets Dolphin find installed apps for "Open With" without Plasma.
+hl.env("XDG_MENU_PREFIX", "arch-")
 hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
 {% if gpu_vendor == 'nvidia' %}
 

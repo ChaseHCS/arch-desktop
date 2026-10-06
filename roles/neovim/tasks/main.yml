@@ -43,7 +43,7 @@
   changed_when: true
   failed_when: false
   when:
-    - neovim_bootstrap_plugins
+    - neovim_bootstrap_plugins | bool
     - not neovim_config_dir.stat.exists
 
 - name: Report plugin install problems

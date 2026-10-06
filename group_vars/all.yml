@@ -33,14 +33,19 @@ nvidia_driver_package: nvidia-open-dkms
 nvidia_early_kms: true
 
 # --- Desktop ----------------------------------------------------------------
-# plasmalogin: KDE's Plasma Login Manager (the Plasma default since 6.6; a fork
-#              of SDDM fixed to the Breeze theme, configured in System Settings)
-# sddm:        classic SDDM with the Breeze theme
-display_manager: plasmalogin
+# Hyprland is the only session. KDE apps (Dolphin, Okular, Ark, Gwenview) and
+# GTK apps are themed Breeze Dark to match.
 browsers:
   - firefox
   - chromium
 enable_bluetooth: false
+
+# --- Login screen (SDDM + sddm-astronaut-theme) -----------------------------
+# Presets: astronaut, black_hole, cyberpunk, hyprland_kath (animated),
+# jake_the_dog (animated), japanese_aesthetic, pixel_sakura (animated),
+# pixel_sakura_static, post-apocalyptic_hacker, purple_leaves.
+# Previews: https://github.com/Keyitdev/sddm-astronaut-theme
+sddm_theme_preset: hyprland_kath
 
 # --- Hyprland ---------------------------------------------------------------
 hypr_terminal: terminator
