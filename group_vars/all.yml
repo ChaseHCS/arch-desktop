@@ -100,6 +100,16 @@ enable_docker: true
 # `sudo docker` (or set up rootless Docker yourself).
 docker_user_in_group: true
 
+# --- Music ------------------------------------------------------------------
+# Spotify's official client (spotify-launcher) and spotify-player (terminal).
+enable_spotify: true
+# Optional client ID of your own Spotify app, for spotify-player. Create one at
+# https://developer.spotify.com/dashboard with redirect URI
+# http://127.0.0.1:8989/login. Without it, spotify-player uses ncspot's shared
+# client ID, which can hit rate limits. It's a public identifier; never put the
+# app's client *secret* here (PKCE login doesn't need one).
+spotify_client_id: ""
+
 # --- Hardening --------------------------------------------------------------
 enable_hardening: true
 # Keep sshd disabled. The hardened sshd drop-in is written either way.

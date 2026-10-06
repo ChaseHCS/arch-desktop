@@ -1,0 +1,7 @@
+---
+# spotify-launcher installs and updates Spotify's official client in your home
+# directory from Spotify's own repository, checking its signature against the
+# key shipped in the package. spotify-player is the terminal client.
+music_packages:
+  - spotify-launcher
+  - spotify-player

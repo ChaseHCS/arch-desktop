@@ -1,0 +1,41 @@
+---
+- name: Install the Spotify clients
+  community.general.pacman:
+    name: "{{ music_packages }}"
+    state: present
+
+- name: Create the spotify-player config directory
+  ansible.builtin.file:
+    path: "{{ desktop_home }}/.config/spotify-player"
+    state: directory
+    mode: "0755"
+  become: true
+  become_user: "{{ desktop_user }}"
+
+- name: Write Spotify client configs
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ desktop_home }}/{{ item.dest }}"
+    mode: "0644"
+    force: "{{ dotfiles_overwrite }}"
+    backup: true
+  loop:
+    - { src: spotify-launcher.conf.j2, dest: .config/spotify-launcher.conf }
+    - { src: spotify-player.toml.j2, dest: .config/spotify-player/app.toml }
+  loop_control:
+    label: "{{ item.dest }}"
+  become: true
+  become_user: "{{ desktop_user }}"
+
+# Kept in sync separately so setting spotify_client_id later takes effect
+# without overwriting the rest of your app.toml. It must stay above any
+# [table] in the file, hence BOF.
+- name: Set spotify-player's client ID
+  ansible.builtin.lineinfile:
+    path: "{{ desktop_home }}/.config/spotify-player/app.toml"
+    regexp: '^#?\s*client_id\s*='
+    line: 'client_id = "{{ spotify_client_id }}"'
+    insertbefore: BOF
+  become: true
+  become_user: "{{ desktop_user }}"
+  when: spotify_client_id | length > 0

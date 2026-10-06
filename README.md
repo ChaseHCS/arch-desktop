@@ -8,6 +8,7 @@ Ansible playbook that turns a fresh Arch Linux install into a coding desktop:
 - **Shell:** zsh + Oh My Zsh (`robbyrussell`), autosuggestions, syntax highlighting
 - **Terminal:** Terminator (with a `tmux` profile) and tmux, Tokyo Night colours throughout
 - **Editor:** Neovim with LazyVim (Python, TypeScript, Docker, Ansible, YAML, JSON, TOML, Markdown extras)
+- **Music:** Spotify's official client (via `spotify-launcher`, native Wayland) and `spotify-player` in the terminal; both work with the media keys
 - **Toolchains:** Python (uv, pipx), Node.js (system + fnm with the current LTS), Docker (compose, buildx)
 - **GPU:** NVIDIA open kernel modules with early KMS and suspend/resume support (AMD/Intel also supported)
 - **Base:** paru, PipeWire, NetworkManager, microcode, Firefox, Chromium, Nerd Font, maintenance timers
@@ -60,6 +61,8 @@ Set your options in [`group_vars/all.yml`](group_vars/all.yml), or override them
 | `lazyvim_extras` | | Only applied on the first install (`lazyvim.json`). Change later with `:LazyExtras` |
 | `enable_python` / `enable_nodejs` / `enable_docker` | `true` | |
 | `docker_user_in_group` | `true` | See security notes |
+| `enable_spotify` | `true` | Official Spotify client and spotify-player |
+| `spotify_client_id` | `""` | Your own Spotify app's client ID for spotify-player; see [Spotify](#spotify) |
 | `enable_hardening`, `sshd_enabled` | `true`, `false` | Sysctl and faillock values are in `roles/hardening/defaults/main.yml` |
 
 ## Hyprland keybindings
@@ -86,11 +89,20 @@ The config is in `~/.config/hypr/hyprland.lua`. Idle behaviour (lock after 10 mi
 
 Without Plasma there's no System Settings app. Qt/KDE apps take their theme from `~/.config/kdeglobals` and GTK apps from GSettings (change with `gsettings set org.gnome.desktop.interface ...`). Monitors are set in `hyprland.lua` (`hyprctl monitors all` lists them), Wi-Fi through the nm-applet tray icon, and audio through `pavucontrol`.
 
+## Spotify
+
+Both clients need Premium (you have it) and show up as Spotify Connect devices, so you can hand playback between them, your phone and speakers. Media keys and `playerctl` control whichever one is playing.
+
+- **Official client:** launch "Spotify (Launcher)" from fuzzel. The first launch downloads Spotify into `~/.local/share/spotify-launcher`; later launches update it. Lossless is off by default: turn it on under Settings → Audio quality.
+- **spotify-player:** run `spotify_player` in a terminal or tmux. The first run opens your browser twice to approve access: once for the Web API and once for audio streaming.
+- **Own client ID (recommended for spotify-player):** by default spotify-player uses ncspot's client ID, which many users share and which can return `429 Too Many Requests`. Create an app at <https://developer.spotify.com/dashboard> with redirect URI `http://127.0.0.1:8989/login`, put its client ID in `spotify_client_id`, re-run `./bootstrap.sh --tags music`, then run `spotify_player authenticate`. Since 2026, apps in development mode need a Premium owner and allow up to 5 users, which is fine for personal use.
+
 ## Security notes
 
 Trade-offs worth knowing about:
 
 - **Login screen theme:** theme QML runs inside the greeter that receives your password, so keep network and process calls out of it.
+- **Spotify:** the official client is closed-source and runs as your user. spotify-launcher checks Spotify's download against the signing key shipped in the Arch package. spotify-player streams through librespot, an unofficial reimplementation of Spotify's protocol, which technically goes against Spotify's terms and can break when Spotify changes things. Its login tokens in `~/.cache/spotify-player/` give access to your account, so treat them like a password.
 - **Docker group:** being in `docker` is root-equivalent. Set `docker_user_in_group: false` if you'd rather use `sudo docker` or rootless Docker.
 - **AUR:** paru is bootstrapped from the `paru-bin` PKGBUILD, a prebuilt release binary pinned by checksum. AUR packages are user-submitted, so read PKGBUILDs before adding anything to `aur_packages`.
 - **Temporary sudoers rule:** while installing `aur_packages`, a `NOPASSWD: /usr/bin/pacman` rule for your user is written to `/etc/sudoers.d/99-ansible-aur`. It's removed in an `always:` block even if the install fails, and it's never written when `aur_packages` is empty.
@@ -117,5 +129,6 @@ roles/
   terminal/   Terminator and tmux
   neovim/     Neovim and LazyVim
   dev/        Python, Node.js (fnm), Docker
+  music/      Spotify official client and spotify-player
   hardening/  sysctl, module blacklist, sshd, faillock, su
 ```

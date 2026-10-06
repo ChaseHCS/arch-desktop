@@ -1,0 +1,5 @@
+# spotify-launcher config, written by the arch-desktop playbook.
+# Test changes with: spotify-launcher -v --skip-update --no-exec
+[spotify]
+# Run natively on Wayland instead of through XWayland.
+extra_arguments = ["--enable-features=UseOzonePlatform", "--ozone-platform=wayland"]

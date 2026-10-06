@@ -50,6 +50,7 @@
     - { role: terminal, tags: [terminal] }
     - { role: neovim, tags: [neovim] }
     - { role: dev, tags: [dev] }
+    - { role: music, tags: [music], when: enable_spotify | bool }
     - { role: hardening, tags: [hardening], when: enable_hardening | bool }
 
   handlers:

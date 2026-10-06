@@ -1,0 +1,12 @@
+# spotify-player config, written by the arch-desktop playbook.
+# Docs: https://github.com/aome510/spotify-player/blob/master/docs/config.md
+# Options not set here keep their defaults. Colours come from the terminal.
+
+# Your own Spotify app's client ID. Set spotify_client_id in the playbook's
+# group_vars/all.yml (or here), then run `spotify_player authenticate`.
+# Without one, ncspot's shared client ID is used and may hit rate limits.
+# client_id = ""
+
+[device]
+# Name shown in Spotify Connect device lists (phone, official app).
+name = "{{ ansible_facts['hostname'] }} (spotify-player)"
