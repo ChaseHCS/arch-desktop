@@ -30,7 +30,7 @@ Do a base install first. `archinstall` with the **Minimal** profile works:
 As your normal user (not root):
 
 ```sh
-git clone https://github.com/chasehcs/arch-desktop.git
+git clone -b ansible-playbook https://github.com/ChaseHCS/arch-desktop.git
 cd arch-desktop
 ./bootstrap.sh          # upgrades the system and installs ansible first, then runs the playbook
 sudo reboot
